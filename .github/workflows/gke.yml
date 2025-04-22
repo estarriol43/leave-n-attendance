@@ -1,0 +1,63 @@
+name: Build and Deploy to GKE
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  setup-build-publish-deploy:
+    name: Setup, Build, Publish, and Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - id: 'Auth'
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+    - id: 'setup-gcloud'
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ secrets.GCP_PROJECT }}
+
+    - id: 'get-gke-credentials'
+      uses: 'google-github-actions/get-gke-credentials@v2'
+      with:
+        cluster_name: '${{ vars.GKE_CLUSTER_NAME }}'
+        location: '${{ vars.GKE_ZONE }}'
+
+    - id: 'auth-docker'
+      run: |-
+        gcloud auth configure-docker '${{ vars.REGISTRY_ZONE }}-docker.pkg.dev'
+
+    # Build the Docker image
+    - name: Build
+      run: |-
+        docker build --tag '${{ vars.REGISTRY_ZONE }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ vars.REGISTRY_NAME }}/${{ vars.IMAGE_NAME }}:${{ github.sha }}' .
+
+    # Push the Docker image to Google Container Registry
+    - name: Push
+      run: |-
+        docker push '${{ vars.REGISTRY_ZONE }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ vars.REGISTRY_NAME }}/${{ vars.IMAGE_NAME }}:${{ github.sha }}'
+    
+    
+    - name: 'deploy with gke-deploy cli'
+      uses: 'google-github-actions/deploy-gke@v0.0.3'
+      with:
+        image: '${{ vars.REGISTRY_ZONE }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ vars.REGISTRY_NAME }}/${{ vars.IMAGE_NAME }}:${{ github.sha }}'
+        app_name: '${{ vars.DEPLOYMENT_NAME }}'
+        region: '${{ vars.GKE_ZONE }}'
+        cluster_name: '${{ vars.GKE_CLUSTER_NAME }}'
+        project_id: '${{ secrets.GCP_PROJECT }}'
+        expose: '3000'
+    
+    - name: 'get-deployments'
+      shell: bash
+      run: |
+        kubectl get pods
+        kubectl get deployment
