@@ -32,6 +32,20 @@ This project is fully integrated with a CI/CD pipeline to ensure code quality an
 ### Continuous Deployment (CD)
 - **Vercel Auto Deployment**: The project is deployed to [Vercel](https://vercel.com) with automatic deployments triggered on every push to the `main` branch. This ensures the latest changes are always live.
 
+## Docker Usage
+
+### Build
+```
+docker build -t cloud-native-frontend .
+```
+
+## Run
+```
+docker run cloud-native-frontend
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
 ## Getting Started
 
 First, run the development server:
