@@ -27,10 +27,11 @@ This project is fully integrated with a CI/CD pipeline to ensure code quality an
 ### Continuous Integration (CI)
 - **Unit Tests**: The project uses [Jest](https://jestjs.io) for unit testing. All components and logic are thoroughly tested to ensure correctness.
 - **End-to-End Tests**: [Playwright](https://playwright.dev) is used for E2E testing to verify the application's behavior in a browser environment.
-- **GitHub Actions**: CI workflows are configured using GitHub Actions to automatically run tests on every push or pull request to the `main` or `master` branches.
+- **GitHub Actions**:
+  - CI workflows are configured using GitHub Actions to automatically run tests and build the whole project on every push or pull request to the `main` or `master` branches.
+  - CI workflows are configured using GitHub Actions to automatically push the new image to Docker Hub on every new release.
 
 ### Continuous Deployment (CD)
-- **Vercel Auto Deployment**: The project is deployed to [Vercel](https://vercel.com) with automatic deployments triggered on every push to the `main` branch. This ensures the latest changes are always live.
 
 ## Docker Usage
 
