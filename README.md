@@ -29,7 +29,7 @@ This project is fully integrated with a CI/CD pipeline to ensure code quality an
 - **End-to-End Tests**: [Playwright](https://playwright.dev) is used for E2E testing to verify the application's behavior in a browser environment.
 - **GitHub Actions**:
   - CI workflows are configured using GitHub Actions to automatically run tests and build the whole project on every push or pull request to the `main` or `master` branches.
-  - CI workflows are configured using GitHub Actions to automatically push the new image to Docker Hub on every new release.
+  - CI workflows are configured using GitHub Actions to automatically push the new image to Docker Hub on every new release. The image tag will be the release version.
 
 ### Continuous Deployment (CD)
 
