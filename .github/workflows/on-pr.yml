@@ -1,0 +1,18 @@
+name: Build when a PR is created
+
+on:
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 'Checkout'
+      uses: actions/checkout@v4
+
+    - name: 'Build Docker Image'
+      run: |-
+        docker build --tag '${{ github.sha }}' .
