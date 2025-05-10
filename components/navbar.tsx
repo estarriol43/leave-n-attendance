@@ -16,6 +16,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Bell, Clock, FileText, LogOut, Settings, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { useAuth } from '@/hooks/use-auth'
 
 // 定義 Notification 介面
 interface Notification {
@@ -56,6 +57,7 @@ const fakeData: Notification[] = [
 
 export function Navbar() {
   const router = useRouter()
+  const { user, logout, loading: userLoading } = useAuth()
 
   // 使用 Notification 介面作為 useState 的類型
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -195,8 +197,12 @@ export function Navbar() {
             >
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">John Doe</p>
-                  <p className="text-xs text-muted-foreground">john.doe@example.com</p>
+                  <p className="text-sm font-medium">
+                    {userLoading ? '載入中...' : user ? `${user.first_name} ${user.last_name}` : '未登入'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {userLoading ? '' : user?.email || ''}
+                  </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -216,7 +222,7 @@ export function Navbar() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => router.push("/login")}
+                onClick={() => { logout(); router.push("/login") }}
                 data-testid="menu-logout"
               >
                 <LogOut className="mr-2 h-4 w-4" />
