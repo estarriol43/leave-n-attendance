@@ -1,34 +1,58 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { LeaveBalanceProgress } from "@/components/leave-balance-progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-// Mock user data based on API spec
-const userData = {
-  id: 1,
-  employee_id: "EMP001",
-  first_name: "John",
-  last_name: "Doe",
-  email: "john.doe@example.com",
+type User = {
+  id: number
+  employee_id: string
+  first_name: string
+  last_name: string
+  email: string
+  position: string
+  hire_date: string
+  is_manager: boolean
   department: {
-    id: 1,
-    name: "Engineering"
-  },
-  position: "Software Engineer",
+    id: number
+    name: string
+  }
   manager: {
-    id: 2,
-    first_name: "Jane",
-    last_name: "Smith"
-  },
-  hire_date: "2022-01-01",
-  is_manager: false,
-  annual_leave_quota: 7,
-  sick_leave_quota: 30,
-  personal_leave_quota: 14,
-  public_holiday_quota: 5
+    id: number
+    first_name: string
+    last_name: string
+  }
+  annual_leave_quota: number
+  sick_leave_quota: number
+  personal_leave_quota: number
+  public_holiday_quota: number
 }
 
 export default function ProfilePage() {
+  const [userData, setUserData] = useState<User | null>(null)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const res = await fetch("http://localhost:8000/api/users/me", {
+        credentials: "include",
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setUserData(data)
+      } else {
+        console.error("Failed to fetch user profile")
+      }
+    }
+
+    fetchUser()
+  }, [])
+
+  if (!userData) {
+    return <div className="p-4 text-center">Loading profile...</div>
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
@@ -71,8 +95,13 @@ export default function ProfilePage() {
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div className="font-medium">Manager</div>
-                <div className="col-span-2">{userData.manager.first_name} {userData.manager.last_name}</div>
+                <div className="col-span-2">
+                  {userData.manager
+                    ? `${userData.manager.first_name} ${userData.manager.last_name}`
+                    : "—"}
+                </div>
               </div>
+
               <div className="grid grid-cols-3 gap-2">
                 <div className="font-medium">Hire Date</div>
                 <div className="col-span-2">{new Date(userData.hire_date).toLocaleDateString()}</div>
@@ -96,7 +125,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent>
             <LeaveBalanceProgress />
-            
+
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 border rounded-md">
                 <h3 className="font-semibold text-lg mb-2">Annual Leave</h3>
@@ -124,4 +153,4 @@ export default function ProfilePage() {
       </div>
     </div>
   )
-} 
+}
