@@ -16,7 +16,6 @@ const items = [
   { title: "Leave Requests", url: "/dashboard/leave-requests", icon: ClipboardList },
   { title: "Calendar", url: "/dashboard/calendar", icon: Calendar },
   { title: "Team", url: "/dashboard/team", icon: Users },
-  { title: "Reports", url: "/dashboard/reports", icon: PieChart },
   { title: "Notifications", url: "/dashboard/notifications", icon: Bell },
 ]
 

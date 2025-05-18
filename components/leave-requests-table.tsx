@@ -98,7 +98,7 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
           endpoint = `/leave-requests?page=${pagination.page}&per_page=${pagination.per_page}`;
           break;
         case 'pending-approval':
-          endpoint = `/leave-requests/pending?page=${pagination.page}&per_page=${pagination.per_page}`;
+          endpoint = `/leave-requests?page=${pagination.page}&per_page=${pagination.per_page}&status=pending`;
           break;
         case 'team-requests':
           endpoint = `/leave-requests/team?page=${pagination.page}&per_page=${pagination.per_page}`;
@@ -138,7 +138,7 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
     
     try {
       await api.post(
-        `/api/leave-requests/${selectedRequest.id}/approve`,
+        `/leave-requests/${selectedRequest.id}/approve`,
         {}
       );
       
@@ -166,7 +166,7 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
 
     try {
       await api.post(
-        `/api/leave-requests/${selectedRequest.id}/reject`,
+        `/leave-requests/${selectedRequest.id}/reject`,
         { rejection_reason: rejectReason }
       );
       

@@ -3,6 +3,7 @@
 import { useAuth } from "@/hooks/use-auth"
 import { LeaveBalanceProgress } from "@/components/leave-balance-progress"
 import { RecentLeaveRequests } from "@/components/recent-leave-requests"
+import { TeamAvailability } from "@/components/team-availability"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function DashboardPage() {
@@ -33,21 +34,7 @@ export default function DashboardPage() {
             <CardDescription>Team members on leave today</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="text-3xl font-bold">3/12</div>
-              <div className="text-sm text-muted-foreground">
-                <p>Team members present: 9</p>
-                <p>Team members on leave: 3</p>
-              </div>
-              <div className="text-sm">
-                <p className="font-medium">On leave today:</p>
-                <ul className="list-disc list-inside text-muted-foreground">
-                  <li>John Doe (Annual Leave)</li>
-                  <li>Jane Smith (Sick Leave)</li>
-                  <li>Mike Johnson (Personal Leave)</li>
-                </ul>
-              </div>
-            </div>
+            <TeamAvailability />
           </CardContent>
         </Card>
       </div>

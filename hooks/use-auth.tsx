@@ -56,6 +56,13 @@ export function useAuth() {
         status: err.response?.status,
         data: err.response?.data
       })
+      
+      // 若是 401/403 錯誤，表示 token 無效或已過期，應該清除並重定向到登入頁面
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        console.log('Token 無效或已過期，即將清除')
+        localStorage.removeItem('access_token')
+      }
+      
       setUser(null)
       setError('驗證失敗，請重新登入')
     } finally {
@@ -147,10 +154,12 @@ export function useAuth() {
     
     const token = getToken()
     // 如果未登入且不在登入頁面，則導向登入頁
-    if (!token && !loading) {
+    // 檢查 token 不存在或已完成載入但用戶資訊不存在
+    if ((!token || (!loading && !user)) && pathname !== '/login') {
+      console.log('未驗證用戶，重定向到登入頁面')
       router.replace('/login')
     }
-  }, [pathname, router, loading])
+  }, [pathname, router, loading, user])
 
   return {
     user,
