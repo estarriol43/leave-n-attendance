@@ -144,13 +144,13 @@ export default function NotificationsPage() {
     const diffDay = Math.floor(diffHour / 24)
     
     if (diffDay > 0) {
-      return diffDay === 1 ? "yesterday" : `${diffDay} days ago`
+      return diffDay === 1 ? "昨天" : `${diffDay} 天前`
     } else if (diffHour > 0) {
-      return `${diffHour} ${diffHour === 1 ? "hour" : "hours"} ago`
+      return `${diffHour} 小時前`
     } else if (diffMin > 0) {
-      return `${diffMin} ${diffMin === 1 ? "minute" : "minutes"} ago`
+      return `${diffMin} 分鐘前`
     } else {
-      return "just now"
+      return "剛剛"
     }
   }
   
@@ -158,9 +158,9 @@ export default function NotificationsPage() {
     <div className="flex flex-col gap-8 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+          <h1 className="text-3xl font-bold tracking-tight">通知</h1>
           <p className="text-muted-foreground">
-            View and manage your notifications
+            查看和管理您的通知
           </p>
         </div>
         <Button 
@@ -170,7 +170,7 @@ export default function NotificationsPage() {
           className="sm:w-auto w-full"
         >
           <CheckCheck className="mr-2 h-4 w-4" />
-          Mark All as Read
+          全部標為已讀
         </Button>
       </div>
 
@@ -178,16 +178,16 @@ export default function NotificationsPage() {
         <CardHeader className="pb-4">
           <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="all" disabled={loading}>All</TabsTrigger>
+              <TabsTrigger value="all" disabled={loading}>全部</TabsTrigger>
               <TabsTrigger value="unread" disabled={loading}>
-                Unread
+                未讀
                 {notifications.filter(n => !n.is_read).length > 0 && (
                   <span className="ml-2 rounded-full bg-primary text-primary-foreground px-2.5 py-0.5 text-xs">
                     {notifications.filter(n => !n.is_read).length}
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="read" disabled={loading}>Read</TabsTrigger>
+              <TabsTrigger value="read" disabled={loading}>已讀</TabsTrigger>
             </TabsList>
           </Tabs>
         </CardHeader>
@@ -201,13 +201,13 @@ export default function NotificationsPage() {
           ) : filteredNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Bell className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No notifications</h3>
+              <h3 className="text-lg font-medium">沒有通知</h3>
               <p className="text-sm text-muted-foreground mt-2">
                 {activeTab === "unread" 
-                  ? "You have no unread notifications." 
+                  ? "您沒有未讀的通知。" 
                   : activeTab === "read" 
-                    ? "You have no read notifications."
-                    : "You have no notifications at this time."}
+                    ? "您沒有已讀的通知。"
+                    : "您目前沒有任何通知。"}
               </p>
             </div>
           ) : (
@@ -253,13 +253,12 @@ export default function NotificationsPage() {
                             path = '/dashboard';
                         }
                         
-                        // For now just show a toast, this would be replaced with actual navigation
-                        toast("Navigating to related item", {
-                          description: `Going to ${path}`,
+                        toast("正在前往相關頁面", {
+                          description: `前往 ${path}`,
                         })
                       }}
                     >
-                      View Details
+                      查看詳情
                     </Button>
                     {!notification.is_read && (
                       <Button 
@@ -269,7 +268,7 @@ export default function NotificationsPage() {
                         className="hover:bg-background/80"
                       >
                         <MailOpen className="h-4 w-4 mr-2" />
-                        Mark as Read
+                        標為已讀
                       </Button>
                     )}
                   </div>
@@ -280,7 +279,7 @@ export default function NotificationsPage() {
         </CardContent>
         <CardFooter className="flex justify-between border-t py-6">
           <div className="text-sm text-muted-foreground">
-            Showing {filteredNotifications.length} of {pagination.total} notifications
+            顯示 {filteredNotifications.length} 則通知，共 {pagination.total} 則
           </div>
           {/* Add pagination controls here if needed */}
         </CardFooter>
