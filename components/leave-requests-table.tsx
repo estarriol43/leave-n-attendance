@@ -14,121 +14,57 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { Check, Eye, MoreHorizontal, X } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
+import api from "@/lib/api"
 
 // 定義 LeaveRequest 型別
-interface LeaveRequest {
-  id: string
-  type: string
-  startDate: string
-  endDate: string
-  reason: string
-  status: "Approved" | "Rejected" | "Pending"
-  proxyPerson: string
-  approver?: string
-  employee?: string
-  rejectReason?: string
+interface LeaveType {
+  id: number
+  name: string
 }
 
-// 定義資料
-const myRequests: LeaveRequest[] = [
-  {
-    id: "REQ-001",
-    type: "Annual Leave",
-    startDate: "2023-10-15",
-    endDate: "2023-10-18",
-    reason: "Family vacation",
-    status: "Approved",
-    proxyPerson: "Alice Johnson",
-    approver: "Jane Smith",
-  },
-  {
-    id: "REQ-002",
-    type: "Sick Leave",
-    startDate: "2023-09-05",
-    endDate: "2023-09-06",
-    reason: "Fever",
-    status: "Approved",
-    proxyPerson: "Bob Smith",
-    approver: "Jane Smith",
-  },
-  {
-    id: "REQ-003",
-    type: "Personal Leave",
-    startDate: "2023-11-20",
-    endDate: "2023-11-20",
-    reason: "Personal matters",
-    status: "Pending",
-    proxyPerson: "Carol Williams",
-    approver: "-",
-  },
-  {
-    id: "REQ-004",
-    type: "Annual Leave",
-    startDate: "2023-12-24",
-    endDate: "2023-12-31",
-    reason: "Year-end holiday",
-    status: "Pending",
-    proxyPerson: "David Brown",
-    approver: "-",
-  },
-]
+interface ProxyUser {
+  id: number
+  first_name: string
+  last_name: string
+}
 
-const pendingApproval: LeaveRequest[] = [
-  {
-    id: "REQ-005",
-    employee: "John Doe",
-    type: "Annual Leave",
-    startDate: "2023-10-25",
-    endDate: "2023-10-27",
-    reason: "Family event",
-    status: "Pending",
-    proxyPerson: "Alice Johnson",
-  },
-  {
-    id: "REQ-006",
-    employee: "Sarah Lee",
-    type: "Sick Leave",
-    startDate: "2023-10-18",
-    endDate: "2023-10-19",
-    reason: "Not feeling well",
-    status: "Pending",
-    proxyPerson: "Bob Smith",
-  },
-]
+interface LeaveRequest {
+  id: number
+  request_id: string
+  leave_type: LeaveType
+  start_date: string
+  end_date: string
+  days_count: number
+  reason: string
+  status: string
+  proxy_person: ProxyUser
+  approver?: ProxyUser | null
+  approved_at?: string | null
+  created_at: string
+  rejection_reason?: string | null
+  user?: ProxyUser
+}
 
-const teamRequests: LeaveRequest[] = [
-  ...myRequests,
-  {
-    id: "REQ-007",
-    employee: "Michael Johnson",
-    type: "Annual Leave",
-    startDate: "2023-11-01",
-    endDate: "2023-11-05",
-    reason: "Vacation",
-    status: "Approved",
-    proxyPerson: "John Doe",
-    approver: "Jane Smith",
-  },
-  {
-    id: "REQ-008",
-    employee: "Emily Davis",
-    type: "Personal Leave",
-    startDate: "2023-10-30",
-    endDate: "2023-10-30",
-    reason: "Personal matters",
-    status: "Rejected",
-    proxyPerson: "Sarah Lee",
-    approver: "Jane Smith",
-    rejectReason: "Critical project deadline",
-  },
-]
+interface PaginationMeta {
+  total: number
+  page: number
+  per_page: number
+  total_pages: number
+}
+
+interface LeaveRequestListResponse {
+  leave_requests: LeaveRequest[]
+  pagination: PaginationMeta
+}
 
 // 定義 Props 型別
 interface LeaveRequestsTableProps {
   type: "my-requests" | "pending-approval" | "team-requests"
 }
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
 export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null)
@@ -136,9 +72,51 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false)
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState("")
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    total: 0,
+    page: 1,
+    per_page: 10,
+    total_pages: 0
+  })
 
-  const data: LeaveRequest[] =
-    type === "my-requests" ? myRequests : type === "pending-approval" ? pendingApproval : teamRequests
+  useEffect(() => {
+    fetchLeaveRequests()
+  }, [type, pagination.page])
+
+  const fetchLeaveRequests = async () => {
+    setLoading(true)
+    setError(null)
+    
+    try {
+      let endpoint = '';
+      
+      switch (type) {
+        case 'my-requests':
+          endpoint = `/leave-requests?page=${pagination.page}&per_page=${pagination.per_page}`;
+          break;
+        case 'pending-approval':
+          endpoint = `/leave-requests?page=${pagination.page}&per_page=${pagination.per_page}&status=pending`;
+          break;
+        case 'team-requests':
+          endpoint = `/leave-requests/team?page=${pagination.page}&per_page=${pagination.per_page}`;
+          break;
+      }
+      
+      const response = await api.get<LeaveRequestListResponse>(endpoint);
+      
+      setLeaveRequests(response.data.leave_requests);
+      setPagination(response.data.pagination);
+    } catch (err) {
+      console.error('Error fetching leave requests:', err);
+      setError('Failed to fetch leave requests. Please try again later.');
+      toast.error('Failed to fetch leave requests');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleView = (request: LeaveRequest) => {
     setSelectedRequest(request)
@@ -155,28 +133,69 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
     setIsRejectDialogOpen(true)
   }
 
-  const confirmApprove = () => {
+  const confirmApprove = async () => {
     if (!selectedRequest) return
-    toast("Request approved", {
-      description: `Leave request ${selectedRequest.id} has been approved.`,
-    })
-    setIsApproveDialogOpen(false)
+    
+    try {
+      await api.post(
+        `/leave-requests/${selectedRequest.id}/approve`,
+        {}
+      );
+      
+      toast.success("Request approved", {
+        description: `Leave request ${selectedRequest.request_id} has been approved.`,
+      });
+      
+      fetchLeaveRequests(); // Refresh the data
+    } catch (err) {
+      console.error('Error approving leave request:', err);
+      toast.error('Failed to approve leave request');
+    }
+    
+    setIsApproveDialogOpen(false);
   }
 
-  const confirmReject = () => {
+  const confirmReject = async () => {
     if (!selectedRequest) return
     if (!rejectReason) {
-      toast("Rejection reason required", {
+      toast.error("Rejection reason required", {
         description: "Please provide a reason for rejecting this request.",
       })
       return
     }
 
-    toast("Request rejected", {
-      description: `Leave request ${selectedRequest.id} has been rejected.`,
-    })
-    setIsRejectDialogOpen(false)
-    setRejectReason("")
+    try {
+      await api.post(
+        `/leave-requests/${selectedRequest.id}/reject`,
+        { rejection_reason: rejectReason }
+      );
+      
+      toast.success("Request rejected", {
+        description: `Leave request ${selectedRequest.request_id} has been rejected.`,
+      });
+      
+      fetchLeaveRequests(); // Refresh the data
+    } catch (err) {
+      console.error('Error rejecting leave request:', err);
+      toast.error('Failed to reject leave request');
+    }
+    
+    setIsRejectDialogOpen(false);
+    setRejectReason("");
+  }
+
+  // Format the proxy person's name
+  const formatName = (person: ProxyUser | null | undefined) => {
+    if (!person) return '-';
+    return `${person.first_name} ${person.last_name}`;
+  };
+
+  if (loading && leaveRequests.length === 0) {
+    return <div className="text-center py-4">Loading leave requests...</div>;
+  }
+  
+  if (error && leaveRequests.length === 0) {
+    return <div className="text-center py-4 text-red-500">{error}</div>;
   }
 
   return (
@@ -195,63 +214,94 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((request) => (
-            <TableRow key={request.id}>
-              <TableCell className="font-medium">{request.id}</TableCell>
-              {(type === "pending-approval" || type === "team-requests") && (
-                <TableCell>{request.employee || "You"}</TableCell>
-              )}
-              <TableCell>{request.type}</TableCell>
-              <TableCell>
-                {request.startDate} to {request.endDate}
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant={
-                    request.status === "Approved"
-                      ? "default"
-                      : request.status === "Rejected"
-                        ? "destructive"
-                        : "outline"
-                  }
-                >
-                  {request.status}
-                </Badge>
-              </TableCell>
-              <TableCell>{request.proxyPerson}</TableCell>
-              {type !== "pending-approval" && <TableCell>{request.approver}</TableCell>}
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                      <span className="sr-only">Actions</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleView(request)}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      View Details
-                    </DropdownMenuItem>
-                    {type === "pending-approval" && request.status === "Pending" && (
-                      <>
-                        <DropdownMenuItem onClick={() => handleApprove(request)}>
-                          <Check className="mr-2 h-4 w-4" />
-                          Approve
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleReject(request)}>
-                          <X className="mr-2 h-4 w-4" />
-                          Reject
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          {leaveRequests.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={type === "pending-approval" ? 7 : 8} className="text-center">
+                No leave requests found
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            leaveRequests.map((request) => (
+              <TableRow key={request.id}>
+                <TableCell className="font-medium">{request.request_id}</TableCell>
+                {(type === "pending-approval" || type === "team-requests") && (
+                  <TableCell>{request.user ? formatName(request.user) : "You"}</TableCell>
+                )}
+                <TableCell>{request.leave_type.name}</TableCell>
+                <TableCell>
+                  {request.start_date} to {request.end_date}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant={
+                      request.status.toLowerCase() === "approved"
+                        ? "default"
+                        : request.status.toLowerCase() === "rejected"
+                          ? "destructive"
+                          : "outline"
+                    }
+                  >
+                    {request.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>{formatName(request.proxy_person)}</TableCell>
+                {type !== "pending-approval" && <TableCell>{formatName(request.approver)}</TableCell>}
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Actions</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleView(request)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Details
+                      </DropdownMenuItem>
+                      {type === "pending-approval" && request.status.toLowerCase() === "pending" && (
+                        <>
+                          <DropdownMenuItem onClick={() => handleApprove(request)}>
+                            <Check className="mr-2 h-4 w-4" />
+                            Approve
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleReject(request)}>
+                            <X className="mr-2 h-4 w-4" />
+                            Reject
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
+
+      {/* Pagination Controls */}
+      {pagination.total_pages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setPagination({...pagination, page: Math.max(1, pagination.page - 1)})}
+            disabled={pagination.page <= 1}
+          >
+            Previous
+          </Button>
+          <span>
+            Page {pagination.page} of {pagination.total_pages}
+          </span>
+          <Button 
+            variant="outline" 
+            onClick={() => setPagination({...pagination, page: Math.min(pagination.total_pages, pagination.page + 1)})}
+            disabled={pagination.page >= pagination.total_pages}
+          >
+            Next
+          </Button>
+        </div>
+      )}
 
       {/* View Request Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
@@ -264,23 +314,27 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">Request ID:</div>
-                <div className="col-span-2">{selectedRequest.id}</div>
+                <div className="col-span-2">{selectedRequest.request_id}</div>
               </div>
-              {selectedRequest.employee && (
+              {selectedRequest.user && (
                 <div className="grid grid-cols-3 gap-4">
                   <div className="font-medium">Employee:</div>
-                  <div className="col-span-2">{selectedRequest.employee}</div>
+                  <div className="col-span-2">{formatName(selectedRequest.user)}</div>
                 </div>
               )}
               <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">Leave Type:</div>
-                <div className="col-span-2">{selectedRequest.type}</div>
+                <div className="col-span-2">{selectedRequest.leave_type.name}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">Period:</div>
                 <div className="col-span-2">
-                  {selectedRequest.startDate} to {selectedRequest.endDate}
+                  {selectedRequest.start_date} to {selectedRequest.end_date}
                 </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="font-medium">Days Count:</div>
+                <div className="col-span-2">{selectedRequest.days_count}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">Reason:</div>
@@ -291,9 +345,9 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
                 <div className="col-span-2">
                   <Badge
                     variant={
-                      selectedRequest.status === "Approved"
+                      selectedRequest.status.toLowerCase() === "approved"
                         ? "default"
-                        : selectedRequest.status === "Rejected"
+                        : selectedRequest.status.toLowerCase() === "rejected"
                           ? "destructive"
                           : "outline"
                     }
@@ -304,18 +358,28 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">Proxy Person:</div>
-                <div className="col-span-2">{selectedRequest.proxyPerson}</div>
+                <div className="col-span-2">{formatName(selectedRequest.proxy_person)}</div>
               </div>
               {selectedRequest.approver && (
                 <div className="grid grid-cols-3 gap-4">
                   <div className="font-medium">Approver:</div>
-                  <div className="col-span-2">{selectedRequest.approver}</div>
+                  <div className="col-span-2">{formatName(selectedRequest.approver)}</div>
                 </div>
               )}
-              {selectedRequest.rejectReason && (
+              {selectedRequest.rejection_reason && (
                 <div className="grid grid-cols-3 gap-4">
                   <div className="font-medium">Rejection Reason:</div>
-                  <div className="col-span-2">{selectedRequest.rejectReason}</div>
+                  <div className="col-span-2">{selectedRequest.rejection_reason}</div>
+                </div>
+              )}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="font-medium">Created At:</div>
+                <div className="col-span-2">{new Date(selectedRequest.created_at).toLocaleString()}</div>
+              </div>
+              {selectedRequest.approved_at && (
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="font-medium">Approved At:</div>
+                  <div className="col-span-2">{new Date(selectedRequest.approved_at).toLocaleString()}</div>
                 </div>
               )}
             </div>
@@ -337,21 +401,25 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">Request ID:</div>
-                <div className="col-span-2">{selectedRequest.id}</div>
+                <div className="col-span-2">{selectedRequest.request_id}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">Employee:</div>
-                <div className="col-span-2">{selectedRequest.employee}</div>
+                <div className="col-span-2">{selectedRequest.user ? formatName(selectedRequest.user) : "You"}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">Leave Type:</div>
-                <div className="col-span-2">{selectedRequest.type}</div>
+                <div className="col-span-2">{selectedRequest.leave_type.name}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">Period:</div>
                 <div className="col-span-2">
-                  {selectedRequest.startDate} to {selectedRequest.endDate}
+                  {selectedRequest.start_date} to {selectedRequest.end_date}
                 </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="font-medium">Days Count:</div>
+                <div className="col-span-2">{selectedRequest.days_count}</div>
               </div>
             </div>
           )}
@@ -375,20 +443,20 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">Request ID:</div>
-                <div className="col-span-2">{selectedRequest.id}</div>
+                <div className="col-span-2">{selectedRequest.request_id}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">Employee:</div>
-                <div className="col-span-2">{selectedRequest.employee}</div>
+                <div className="col-span-2">{selectedRequest.user ? formatName(selectedRequest.user) : "You"}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">Leave Type:</div>
-                <div className="col-span-2">{selectedRequest.type}</div>
+                <div className="col-span-2">{selectedRequest.leave_type.name}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="font-medium">Period:</div>
                 <div className="col-span-2">
-                  {selectedRequest.startDate} to {selectedRequest.endDate}
+                  {selectedRequest.start_date} to {selectedRequest.end_date}
                 </div>
               </div>
               <div className="grid gap-2">

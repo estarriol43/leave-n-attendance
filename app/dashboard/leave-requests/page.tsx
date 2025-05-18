@@ -14,7 +14,7 @@ export default function LeaveRequestsPage() {
           <p className="text-muted-foreground">Manage your leave requests and approvals</p>
         </div>
         <Button asChild>
-          <Link href="/leave-requests/new">
+          <Link href="/dashboard/leave-requests/new">
             <Plus className="mr-2 h-4 w-4" />
             New Request
           </Link>
