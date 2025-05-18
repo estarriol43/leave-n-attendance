@@ -5,6 +5,11 @@ import { LeaveBalanceProgress } from "@/components/leave-balance-progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import api from "@/lib/api"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 
 type User = {
   id: number
@@ -24,46 +29,116 @@ type User = {
     first_name: string
     last_name: string
   }
-  annual_leave_quota: number
-  sick_leave_quota: number
-  personal_leave_quota: number
-  public_holiday_quota: number
+}
+
+interface LeaveType {
+  id: number
+  name: string
+  color_code: string
+}
+
+interface LeaveBalanceItem {
+  leave_type: LeaveType
+  quota: number
+  used_days: number
+  remaining_days: number
 }
 
 export default function ProfilePage() {
   const [userData, setUserData] = useState<User | null>(null)
+  const [leaveBalances, setLeaveBalances] = useState<LeaveBalanceItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isEditing, setIsEditing] = useState(false)
+  const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    position: ""
+  })
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const res = await fetch("http://localhost:8000/api/users/me", {
-        credentials: "include",
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setUserData(data)
-      } else {
-        console.error("Failed to fetch user profile")
+    const fetchData = async () => {
+      try {
+        const [userResponse, balancesResponse] = await Promise.all([
+          api.get('/users/me'),
+          api.get('/leave-balances')
+        ])
+        
+        setUserData(userResponse.data)
+        
+        // Initialize form data with user data
+        setFormData({
+          first_name: userResponse.data.first_name,
+          last_name: userResponse.data.last_name,
+          email: userResponse.data.email,
+          position: userResponse.data.position
+        })
+        
+        if (balancesResponse.data && balancesResponse.data.balances) {
+          setLeaveBalances(balancesResponse.data.balances)
+        }
+      } catch (error) {
+        console.error("Failed to fetch data", error)
+      } finally {
+        setLoading(false)
       }
     }
 
-    fetchUser()
+    fetchData()
   }, [])
 
-  if (!userData) {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleSaveProfile = async () => {
+    try {
+      setLoading(true)
+      const response = await api.put('/users/me', formData)
+      
+      if (response.data) {
+        setUserData(prev => ({
+          ...prev!,
+          ...formData
+        }))
+        toast.success("個人資料已更新成功")
+        setIsEditing(false)
+      }
+    } catch (error) {
+      console.error("Failed to update profile", error)
+      toast.error("更新個人資料失敗，請稍後再試")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading || !userData) {
     return <div className="p-4 text-center">Loading profile...</div>
+  }
+
+  // Get leave quotas by type
+  const getLeaveQuota = (typeName: string) => {
+    const balance = leaveBalances.find(b => 
+      b.leave_type.name.toLowerCase().includes(typeName.toLowerCase())
+    )
+    return balance ? balance.quota : 0
+  }
+  
+  const getRemainingDays = (typeName: string) => {
+    const balance = leaveBalances.find(b => 
+      b.leave_type.name.toLowerCase().includes(typeName.toLowerCase())
+    )
+    return balance ? balance.remaining_days : 0
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
-        <p className="text-muted-foreground">
-          View and manage your personal information and leave balance
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="col-span-1">
+      <div className="flex items-center justify-center">
+        <Card className="w-[25rem] lg:w-[30rem] max-w-full mx-4">
           <CardHeader>
             <CardTitle>Personal Information</CardTitle>
             <CardDescription>Your employee details and account information</CardDescription>
@@ -75,7 +150,30 @@ export default function ProfilePage() {
                 <AvatarFallback>{userData.first_name[0]}{userData.last_name[0]}</AvatarFallback>
               </Avatar>
               <div className="text-center">
-                <h3 className="text-lg font-semibold">{userData.first_name} {userData.last_name}</h3>
+                {isEditing ? (
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="grid w-full items-center gap-1.5">
+                      <Label htmlFor="first_name">First Name</Label>
+                      <Input 
+                        id="first_name"
+                        name="first_name"
+                        value={formData.first_name}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="grid w-full items-center gap-1.5">
+                      <Label htmlFor="last_name">Last Name</Label>
+                      <Input 
+                        id="last_name"
+                        name="last_name"
+                        value={formData.last_name}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <h3 className="text-lg font-semibold">{userData.first_name} {userData.last_name}</h3>
+                )}
                 <p className="text-muted-foreground">{userData.position}</p>
               </div>
             </div>
@@ -85,14 +183,28 @@ export default function ProfilePage() {
                 <div className="font-medium">Employee ID</div>
                 <div className="col-span-2">{userData.employee_id}</div>
               </div>
+               
               <div className="grid grid-cols-3 gap-2">
                 <div className="font-medium">Email</div>
-                <div className="col-span-2">{userData.email}</div>
+                {isEditing ? (
+                  <div className="col-span-2">
+                    <Input 
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                ) : (
+                  <div className="col-span-2">{userData.email}</div>
+                )}
               </div>
+               
               <div className="grid grid-cols-3 gap-2">
                 <div className="font-medium">Department</div>
                 <div className="col-span-2">{userData.department.name}</div>
               </div>
+               
               <div className="grid grid-cols-3 gap-2">
                 <div className="font-medium">Manager</div>
                 <div className="col-span-2">
@@ -106,47 +218,49 @@ export default function ProfilePage() {
                 <div className="font-medium">Hire Date</div>
                 <div className="col-span-2">{new Date(userData.hire_date).toLocaleDateString()}</div>
               </div>
+               
               <div className="grid grid-cols-3 gap-2">
                 <div className="font-medium">Role</div>
-                <div className="col-span-2">{userData.is_manager ? "Manager" : "Employee"}</div>
+                <div className="col-span-2">
+                  <Badge variant={userData.is_manager ? "default" : "secondary"}>
+                    {userData.is_manager ? "Manager" : "Employee"}
+                  </Badge>
+                </div>
               </div>
             </div>
 
-            <div className="mt-6">
-              <Button variant="outline" className="w-full">Edit Profile</Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Leave Balance</CardTitle>
-            <CardDescription>Your current leave balance for the year 2023</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <LeaveBalanceProgress />
-
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 border rounded-md">
-                <h3 className="font-semibold text-lg mb-2">Annual Leave</h3>
-                <p className="text-3xl font-bold text-blue-500 mb-2">{userData.annual_leave_quota} days</p>
-                <p className="text-sm text-muted-foreground">Default quota per year</p>
-              </div>
-              <div className="p-4 border rounded-md">
-                <h3 className="font-semibold text-lg mb-2">Sick Leave</h3>
-                <p className="text-3xl font-bold text-red-500 mb-2">{userData.sick_leave_quota} days</p>
-                <p className="text-sm text-muted-foreground">Default quota per year</p>
-              </div>
-              <div className="p-4 border rounded-md">
-                <h3 className="font-semibold text-lg mb-2">Personal Leave</h3>
-                <p className="text-3xl font-bold text-green-500 mb-2">{userData.personal_leave_quota} days</p>
-                <p className="text-sm text-muted-foreground">Default quota per year</p>
-              </div>
-              <div className="p-4 border rounded-md">
-                <h3 className="font-semibold text-lg mb-2">Public Holiday</h3>
-                <p className="text-3xl font-bold text-amber-500 mb-2">{userData.public_holiday_quota} days</p>
-                <p className="text-sm text-muted-foreground">Default quota per year</p>
-              </div>
+            <div className="mt-6 flex gap-2">
+              {isEditing ? (
+                <>
+                  <Button onClick={handleSaveProfile} disabled={loading} className="flex-1">
+                    Save Changes
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsEditing(false)
+                      // Reset form data to original values
+                      setFormData({
+                        first_name: userData.first_name,
+                        last_name: userData.last_name,
+                        email: userData.email,
+                        position: userData.position
+                      })
+                    }} 
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsEditing(true)} 
+                  className="w-full"
+                >
+                  Edit Profile
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
