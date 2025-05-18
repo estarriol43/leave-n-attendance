@@ -1,6 +1,14 @@
 "use client"
 
 import type React from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { format } from "date-fns"
+import { CalendarIcon, Paperclip, X } from "lucide-react"
+import { toast } from "sonner"
+import * as z from "zod"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -11,46 +19,27 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { format } from "date-fns"
-import { CalendarIcon, Paperclip, X } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { toast } from "sonner"
-import * as z from "zod"
-
-const leaveTypes = [
-  { id: "annual", name: "Annual Leave", balance: 7 },
-  { id: "sick", name: "Sick Leave", balance: 30 },
-  { id: "personal", name: "Personal Leave", balance: 14 },
-  { id: "public", name: "Public Holiday", balance: 5 },
-]
-
-const proxyPersons = [
-  { id: "1", name: "Alice Johnson" },
-  { id: "2", name: "Bob Smith" },
-  { id: "3", name: "Carol Williams" },
-  { id: "4", name: "David Brown" },
-]
+import { getTeamMembers, type TeamMember } from "@/lib/services/team"
+import { type LeaveType, getLeaveTypes } from "@/lib/services/leave-type"
+import { createLeaveRequest } from "@/lib/services/leave-request"
 
 const formSchema = z.object({
   leaveType: z.string({
-    required_error: "Please select a leave type",
+    required_error: "請選擇假別",
   }),
   dateRange: z.object({
     from: z.date({
-      required_error: "Start date is required",
+      required_error: "請選擇開始日期",
     }),
     to: z.date({
-      required_error: "End date is required",
+      required_error: "請選擇結束日期",
     }),
   }),
   reason: z.string().min(5, {
-    message: "Reason must be at least 5 characters",
+    message: "請至少填寫 5 個字",
   }),
   proxyPerson: z.string({
-    required_error: "Please select a proxy person",
+    required_error: "請選擇代理人",
   }),
   attachment: z.any().optional(),
 })
@@ -58,6 +47,9 @@ const formSchema = z.object({
 export default function NewLeaveRequestPage() {
   const router = useRouter()
   const [files, setFiles] = useState<File[]>([])
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -66,15 +58,51 @@ export default function NewLeaveRequestPage() {
     },
   })
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // In a real application, you would submit the form data to your API
-    console.log(values)
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [types, members] = await Promise.all([
+          getLeaveTypes(),
+          getTeamMembers(),
+        ])
+        setLeaveTypes(types)
+        setTeamMembers(members)
+      } catch (error) {
+        console.error('Failed to fetch data:', error)
+        toast.error("載入資料失敗", {
+          description: "請重新整理頁面再試一次",
+        })
+      }
+    }
+    fetchData()
+  }, [])
 
-    toast("Leave request submitted", {
-      description: "Your leave request has been submitted successfully.",
-    })
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      setIsSubmitting(true)
+      const data = {
+        leave_type_id: parseInt(values.leaveType),
+        start_date: format(values.dateRange.from, 'yyyy-MM-dd'),
+        end_date: format(values.dateRange.to, 'yyyy-MM-dd'),
+        reason: values.reason,
+        proxy_user_id: parseInt(values.proxyPerson),
+      }
 
-    router.push("/leave-requests")
+      await createLeaveRequest(data)
+
+      toast.success("請假申請已送出", {
+        description: "您的請假申請已成功送出。",
+      })
+
+      router.push("/dashboard/leave-requests")
+    } catch (error) {
+      console.error('Failed to submit leave request:', error)
+      toast.error("送出申請失敗", {
+        description: "請稍後再試一次",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,14 +119,14 @@ export default function NewLeaveRequestPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="flex flex-col gap-2 mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">New Leave Request</h1>
-        <p className="text-muted-foreground">Fill out the form below to submit a new leave request.</p>
+        <h1 className="text-3xl font-bold tracking-tight">請假申請</h1>
+        <p className="text-muted-foreground">請填寫以下表單以提交新的請假申請。</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Leave Request Form</CardTitle>
-          <CardDescription>Please provide all required information for your leave request.</CardDescription>
+          <CardTitle>請假申請表</CardTitle>
+          <CardDescription>請提供所有必要的請假資訊。</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -108,22 +136,22 @@ export default function NewLeaveRequestPage() {
                 name="leaveType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Leave Type</FormLabel>
+                    <FormLabel>假別</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select leave type" />
+                          <SelectValue placeholder="選擇假別" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {leaveTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id}>
-                            {type.name} ({type.balance} days available)
+                          <SelectItem key={type.id} value={type.id.toString()}>
+                            {type.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription>Select the type of leave you want to request.</FormDescription>
+                    <FormDescription>請選擇您要申請的假別類型。</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -134,7 +162,7 @@ export default function NewLeaveRequestPage() {
                 name="dateRange"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Date Range</FormLabel>
+                    <FormLabel>請假期間</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -149,13 +177,13 @@ export default function NewLeaveRequestPage() {
                             {field.value?.from ? (
                               field.value.to ? (
                                 <>
-                                  {format(field.value.from, "LLL dd, y")} - {format(field.value.to, "LLL dd, y")}
+                                  {format(field.value.from, "yyyy/MM/dd")} - {format(field.value.to, "yyyy/MM/dd")}
                                 </>
                               ) : (
-                                format(field.value.from, "LLL dd, y")
+                                format(field.value.from, "yyyy/MM/dd")
                               )
                             ) : (
-                              <span>Select date range</span>
+                              <span>選擇日期範圍</span>
                             )}
                           </Button>
                         </FormControl>
@@ -164,7 +192,7 @@ export default function NewLeaveRequestPage() {
                         <Calendar mode="range" selected={field.value} onSelect={field.onChange} initialFocus />
                       </PopoverContent>
                     </Popover>
-                    <FormDescription>Select the start and end dates for your leave.</FormDescription>
+                    <FormDescription>請選擇請假的起始日期。</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -175,15 +203,15 @@ export default function NewLeaveRequestPage() {
                 name="reason"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Reason</FormLabel>
+                    <FormLabel>請假事由</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Please provide a reason for your leave request"
+                        placeholder="請說明請假原因"
                         className="resize-none"
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>Briefly explain the reason for your leave request.</FormDescription>
+                    <FormDescription>請簡要說明您的請假原因。</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -194,23 +222,23 @@ export default function NewLeaveRequestPage() {
                 name="proxyPerson"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Proxy Person</FormLabel>
+                    <FormLabel>代理人</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select proxy person" />
+                          <SelectValue placeholder="選擇代理人" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {proxyPersons.map((person) => (
-                          <SelectItem key={person.id} value={person.id}>
-                            {person.name}
+                        {teamMembers.map((person) => (
+                          <SelectItem key={person.id} value={person.id.toString()}>
+                            {person.first_name} {person.last_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      Select a colleague who will handle your responsibilities during your absence.
+                      請選擇在您請假期間可以處理您工作的同事。
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -222,7 +250,7 @@ export default function NewLeaveRequestPage() {
                 name="attachment"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Attachments</FormLabel>
+                    <FormLabel>附件</FormLabel>
                     <FormControl>
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
@@ -233,14 +261,14 @@ export default function NewLeaveRequestPage() {
                             onClick={() => document.getElementById("file-upload")?.click()}
                           >
                             <Paperclip className="mr-2 h-4 w-4" />
-                            Attach Files
+                            上傳附件
                           </Button>
                         </div>
 
                         {files.length > 0 && (
                           <div className="space-y-2">
                             {files.map((file, index) => (
-                              <div key={index} className="flex items-center justify-between rounded-md border p-2">
+                              <div key={`file-${index}`} className="flex items-center justify-between rounded-md border p-2">
                                 <div className="flex items-center gap-2 text-sm">
                                   <Paperclip className="h-4 w-4" />
                                   <span>{file.name}</span>
@@ -255,7 +283,7 @@ export default function NewLeaveRequestPage() {
                       </div>
                     </FormControl>
                     <FormDescription>
-                      Attach any relevant documents (required for public holiday requests).
+                      上傳相關文件（國定假日申請必須附上證明文件）。
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -263,10 +291,17 @@ export default function NewLeaveRequestPage() {
               />
 
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => router.push("/leave-requests")}>
-                  Cancel
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => router.push("/dashboard/leave-requests")}
+                  disabled={isSubmitting}
+                >
+                  取消
                 </Button>
-                <Button type="submit">Submit Request</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "送出中..." : "送出申請"}
+                </Button>
               </div>
             </form>
           </Form>

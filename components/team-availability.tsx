@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { 
   getTeamMembersOnLeaveToday, 
   type MemberOnLeave 
-} from "@/lib/services/calendar-service"
+} from "@/lib/services/calendar"
 
 // Skeleton component defined inline
 function TeamAvailabilitySkeleton() {
@@ -37,6 +37,23 @@ function TeamAvailabilitySkeleton() {
       </div>
     </div>
   )
+}
+
+function TeamAvailabilityStatsSkeleton() {
+  return (
+    <div className="text-sm text-muted-foreground space-y-1">
+      <div className="flex items-center gap-2">
+        <span>出勤:</span> 
+        <Skeleton className="h-6 w-16" />
+      </div>
+      <div className="flex items-center gap-2">
+        <span>請假:</span>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={`skeleton-avail-${i}`} className="h-6 w-16" />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function TeamAvailability() {

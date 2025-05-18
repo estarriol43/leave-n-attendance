@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { getCurrentUser } from "@/lib/services/user-service"
+import { getCurrentUser } from "@/lib/services/user"
 
 export default function ProfileRedirect() {
   const router = useRouter()

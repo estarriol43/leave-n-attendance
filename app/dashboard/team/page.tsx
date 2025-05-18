@@ -4,10 +4,10 @@ import { useState, useEffect } from "react"
 import { TeamMember, TeamMemberCard } from "@/components/team-member-card"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getTeamMembers, TeamMemberResponse } from "@/lib/services/team-service"
-import { getTeamLeaveRequests, LeaveRequestTeamItem, isOnLeave } from "@/lib/services/leave-service"
+import { getTeamMembers } from "@/lib/services/team"
+import { getTeamLeaveRequests, LeaveRequestTeamItem, isOnLeave } from "@/lib/services/leave-request"
 import { formatDate } from "@/lib/utils"
-import { getCurrentUser, UserProfile } from "@/lib/services/user-service"
+import { getCurrentUser, UserProfile } from "@/lib/services/user"
 
 export default function TeamPage() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
@@ -37,7 +37,7 @@ export default function TeamPage() {
         setLeaveRequests(leaveData.leave_requests)
         
         // Transform team data to match our component's expected format
-        const processedTeamMembers = teamData.team_members.map(member => {
+        const processedTeamMembers = teamData.map(member => {
           // Check if the member is currently on leave
           const memberLeaveStatus = isOnLeave(member.id, leaveData.leave_requests)
           

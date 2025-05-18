@@ -37,7 +37,7 @@ function NotificationsListSkeleton() {
   return (
     <div className="divide-y divide-border -mx-6">
       {Array.from({ length: 5 }).map((_, index) => (
-        <NotificationSkeleton key={index} />
+        <NotificationSkeleton key={`skeleton-${index}`} />
       ))}
     </div>
   )

@@ -11,14 +11,14 @@ import {
   type ProxyUserOut,
   type LeaveRequestListItem,
   type PaginationMeta
-} from "@/lib/services/leave-request-service"
+} from "@/lib/services/leave-request"
 
 // Skeleton component defined inline
 function RecentLeaveRequestsSkeleton() {
   return (
     <div className="space-y-4">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="flex items-center justify-between">
+        <div key={`skeleton-leave-${i}`} className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Skeleton className="h-10 w-10 rounded-full" />
             <div className="space-y-1">

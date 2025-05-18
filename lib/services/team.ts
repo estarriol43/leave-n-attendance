@@ -8,6 +8,10 @@ export interface TeamMember {
   last_name: string;
   position: string;
   email: string;
+  department: {
+    id: number;
+    name: string;
+  };
 }
 
 export interface TeamListResponse {

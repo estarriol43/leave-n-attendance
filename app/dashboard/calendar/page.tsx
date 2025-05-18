@@ -236,13 +236,79 @@ function TeamAvailabilitySkeleton() {
 
 function LeaveTypesSkeleton() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <Skeleton className="h-3 w-3 rounded-full" />
-          <Skeleton className="h-4 w-24" />
-        </div>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Skeleton key={`skeleton-leavetype-${i}`} className="h-8" />
       ))}
+    </div>
+  )
+}
+
+// Skeleton for calendar side panel
+function CalendarSidePanelSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-32" />
+        <div className="flex items-center gap-2">
+          <span className="text-sm">Available:</span>
+          <Skeleton className="h-5 w-12" />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm">On Leave:</span>
+          <Skeleton className="h-5 w-12" />
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <Skeleton className="h-6 w-24" />
+        <div className="-space-x-2 flex">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={`skeleton-avatar-${i}`} className="h-8 w-8 rounded-full ring-2 ring-background" />
+          ))}
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <Skeleton className="h-6 w-28" />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={`skeleton-upcoming-${i}`} className="h-5 w-20" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Skeleton for members on leave
+function MembersOnLeaveSkeleton() {
+  return (
+    <div className="space-y-3">
+      <Skeleton className="h-6 w-24" />
+      <div className="-space-x-2 flex">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={`skeleton-member-${i}`} className="h-8 w-8 rounded-full ring-2 ring-background" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Skeleton for upcoming leaves
+function UpcomingLeavesSkeleton() {
+  return (
+    <div className="space-y-3">
+      <Skeleton className="h-6 w-28" />
+      <div className="space-y-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={`skeleton-upcoming-leave-${i}`} className="flex items-center gap-2">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <div className="space-y-1">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -266,7 +332,7 @@ function MemberLeaveList({ members }: { members: MemberOnLeave[] }) {
   return (
     <div className="space-y-2 max-h-[60vh] overflow-y-auto">
       {members.map((member, index) => (
-        <div key={index} className="flex items-center justify-between">
+        <div key={`${member.id}-${member.leave_type}-${index}`} className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Avatar className="h-6 w-6">
               <AvatarImage src={`https://ui-avatars.com/api/?name=${member.first_name}+${member.last_name}&background=random`} />
@@ -327,7 +393,7 @@ function CalendarDayContent({ date, membersOnLeave }: { date: Date, membersOnLea
               <p className="font-medium mb-1">{format(date, "EEEE, MMMM d, yyyy")}</p>
               <ul className="space-y-1">
                 {membersOnLeave.map((member, index) => (
-                  <li key={index}>
+                  <li key={`${member.id}-${member.leave_type}-${index}`}>
                     {member.first_name} {member.last_name} - {member.leave_type}
                   </li>
                 ))}

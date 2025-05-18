@@ -1,5 +1,6 @@
-import { clsx, type ClassValue } from "clsx"
+import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { ProxyUserOut } from "./services/leave-request"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -17,4 +18,12 @@ export function formatDate(dateString: string): string {
     day: 'numeric',
     year: 'numeric'
   })
+}
+
+/**
+ * 格式化用戶全名
+ */
+export function formatName(person: { first_name?: string; last_name?: string } | null | undefined) {
+  if (!person) return '-';
+  return `${person.first_name || ''} ${person.last_name || ''}`.trim() || '-';
 }

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { useParams } from "next/navigation"
-import { getCurrentUser, UserProfile } from "@/lib/services/user-service"
+import { getCurrentUser, UserProfile } from "@/lib/services/user"
 
 type User = {
   id: number

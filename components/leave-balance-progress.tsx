@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getMyLeaveBalance, type LeaveBalanceResponse } from "@/lib/services/leave-balance-service"
+import { getMyLeaveBalance, type LeaveBalanceResponse } from "@/lib/services/leave-balance"
 
 // Skeleton component defined inline
 function LeaveBalanceSkeleton() {
@@ -22,6 +22,23 @@ function LeaveBalanceSkeleton() {
               <Skeleton className="h-3 w-16" />
             </div>
           </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Skeleton component
+export function LeaveBalanceProgressSkeleton() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={`skeleton-balance-${i}`} className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+          <Skeleton className="h-3 w-full" />
         </div>
       ))}
     </div>

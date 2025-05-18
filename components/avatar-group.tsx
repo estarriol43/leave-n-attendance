@@ -63,9 +63,9 @@ export function AvatarGroup({
       onClick={onClick}
     >
       <div className="flex -space-x-2">
-        {visibleUsers.map((user) => (
+        {visibleUsers.map((user, index) => (
           <Avatar
-            key={`${user.id}`}
+            key={`${user.id}-${index}`}
             className={cn(
               sizeClasses[size],
               "ring-2 ring-background transition-transform hover:z-10 hover:-translate-y-1",

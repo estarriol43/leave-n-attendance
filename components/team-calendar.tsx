@@ -76,20 +76,17 @@ export function TeamCalendar() {
                 : "請選擇日期"}
             </h3>
 
+            {/* Display avatars of team members on leave */}
             {selectedDateMembers.length > 0 ? (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">請假的團隊成員：</p>
-                <div className="flex flex-wrap gap-2">
-                  {selectedDateMembers.map((member, index) => (
-                    <Avatar key={index}>
-                      <AvatarImage src={`/placeholder.svg?height=32&width=32&text=${member}`} alt={member} />
-                      <AvatarFallback>{member}</AvatarFallback>
-                    </Avatar>
-                  ))}
-                </div>
+              <div className="flex -space-x-2">
+                {selectedDateMembers.map((member, index) => (
+                  <Avatar key={`${member}-${index}`}>
+                    <AvatarFallback>{member}</AvatarFallback>
+                  </Avatar>
+                ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">這個日期沒有團隊成員請假。</p>
+              <p className="text-muted-foreground">No team members on leave</p>
             )}
           </div>
         </CardContent>

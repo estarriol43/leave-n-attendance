@@ -13,134 +13,253 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
-import { Check, Eye, MoreHorizontal, X } from "lucide-react"
+import { Check, Eye, Filter, MoreHorizontal, X, CalendarIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import api from "@/lib/api"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { format } from "date-fns"
+import { cn, formatName } from "@/lib/utils"
 
-// 定義 LeaveRequest 型別
-interface LeaveType {
-  id: number
-  name: string
-}
+// Import the filters component
+import { LeaveRequestFilters as FiltersComponent, UIFilters } from "@/components/filters/leave-request-filters"
 
-interface ProxyUser {
-  id: number
-  first_name: string
-  last_name: string
-}
+// Import services and types
+import { 
+  LeaveRequest, 
+  LeaveRequestListItem,
+  LeaveRequestTeamItem,
+  LeaveRequestListResponse, 
+  LeaveRequestTeamListResponse,
+  PaginationMeta,
+  TeamLeaveRequestFilters,
+  ProxyUserOut,
+  isTeamLeaveRequest,
+  getMyLeaveRequests,
+  getTeamLeaveRequests,
+  getPendingLeaveRequests,
+  approveLeaveRequest,
+  rejectLeaveRequest
+} from "@/lib/services/leave-request"
+import { getLeaveTypes, LeaveType } from "@/lib/services/leave-type"
+import { ViewRequestDialog } from "@/components/dialogs/view-request-dialog"
+import { ApproveRequestDialog } from "@/components/dialogs/approve-request-dialog"
+import { RejectRequestDialog } from "@/components/dialogs/reject-request-dialog"
 
-interface LeaveRequest {
-  id: number
-  request_id: string
-  leave_type: LeaveType
-  start_date: string
-  end_date: string
-  days_count: number
-  reason: string
-  status: string
-  proxy_person: ProxyUser
-  approver?: ProxyUser | null
-  approved_at?: string | null
-  created_at: string
-  rejection_reason?: string | null
-  user?: ProxyUser
-}
-
-interface PaginationMeta {
-  total: number
-  page: number
-  per_page: number
-  total_pages: number
-}
-
-interface LeaveRequestListResponse {
-  leave_requests: LeaveRequest[]
-  pagination: PaginationMeta
-}
-
-// 定義 Props 型別
+// Define Props type
 interface LeaveRequestsTableProps {
   type: "my-requests" | "pending-approval" | "team-requests"
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
 export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
-  const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null)
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
-  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false)
-  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
-  const [rejectReason, setRejectReason] = useState("")
+  // State management
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dataInitialized, setDataInitialized] = useState(false)
+  
+  // Pagination state
   const [pagination, setPagination] = useState<PaginationMeta>({
     total: 0,
     page: 1,
     per_page: 10,
     total_pages: 0
   })
+  
+  // Filter states
+  const [filters, setFilters] = useState<UIFilters>({} as UIFilters)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  
+  // Request action states
+  const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null)
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false)
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
+  const [rejectReason, setRejectReason] = useState("")
+  
+  // API request flags to prevent duplicates
+  const [isLeaveTypesFetching, setIsLeaveTypesFetching] = useState(false)
+  const [isLeaveRequestsFetching, setIsLeaveRequestsFetching] = useState(false)
 
+  // Fetch leave types only once on mount
   useEffect(() => {
-    fetchLeaveRequests()
-  }, [type, pagination.page])
+    if (!dataInitialized) {
+      fetchLeaveTypes();
+      setDataInitialized(true);
+    }
+  }, [dataInitialized]);
 
-  const fetchLeaveRequests = async () => {
-    setLoading(true)
-    setError(null)
+  // Fetch leave requests only when necessary
+  useEffect(() => {
+    fetchLeaveRequests();
+  }, [type, pagination.page]);
+
+  // Fetch leave requests when filters change, but not on initial render
+  useEffect(() => {
+    if (dataInitialized) {
+      fetchLeaveRequests();
+    }
+  }, [filters, dataInitialized]);
+
+  // Data fetching functions
+  const fetchLeaveTypes = async () => {
+    if (isLeaveTypesFetching) return;
     
     try {
-      let endpoint = '';
+      setIsLeaveTypesFetching(true);
+      const data = await getLeaveTypes();
+      setLeaveTypes(data);
+    } catch (err) {
+      console.error('Error fetching leave types:', err);
+      setLeaveTypes([]);
+    } finally {
+      setIsLeaveTypesFetching(false);
+    }
+  };
+
+  const fetchLeaveRequests = async () => {
+    if (isLeaveRequestsFetching) return;
+    
+    try {
+      setIsLeaveRequestsFetching(true);
+      setLoading(true);
+      setError(null);
+      
+      // Convert UI filters to API filters
+      const apiFilters: TeamLeaveRequestFilters = {
+        status: filters.status === 'all' ? undefined : filters.status,
+        start_date: filters.start_date || undefined,
+        end_date: filters.end_date || undefined,
+        page: pagination.page,
+        per_page: pagination.per_page,
+      };
+      
+      // Add user_id only if it's defined
+      if (filters.user_id) {
+        apiFilters.user_id = filters.user_id;
+      }
+      
+      // Add leave_type_id if defined
+      if (filters.leave_type_id) {
+        apiFilters.leave_type_id = filters.leave_type_id;
+      }
+      
+      // Add employee_id filter for team requests
+      if (filters.employee_id && (type === "team-requests" || type === "pending-approval")) {
+        apiFilters.employee_id = filters.employee_id;
+      }
+      
+      console.log('API filters:', apiFilters);
+      
+      let response;
       
       switch (type) {
         case 'my-requests':
-          endpoint = `/leave-requests?page=${pagination.page}&per_page=${pagination.per_page}`;
+          response = await getMyLeaveRequests(apiFilters);
           break;
         case 'pending-approval':
-          endpoint = `/leave-requests?page=${pagination.page}&per_page=${pagination.per_page}&status=pending`;
+          response = await getPendingLeaveRequests(apiFilters);
           break;
         case 'team-requests':
-          endpoint = `/leave-requests/team?page=${pagination.page}&per_page=${pagination.per_page}`;
+          response = await getTeamLeaveRequests(apiFilters);
           break;
       }
       
-      const response = await api.get<LeaveRequestListResponse>(endpoint);
-      
-      setLeaveRequests(response.data.leave_requests);
-      setPagination(response.data.pagination);
+      setLeaveRequests(response.leave_requests);
+      setPagination(response.pagination);
     } catch (err) {
       console.error('Error fetching leave requests:', err);
       setError('無法獲取請假申請資料，請稍後再試。');
       toast.error('無法獲取請假申請資料');
     } finally {
       setLoading(false);
+      setIsLeaveRequestsFetching(false);
     }
   };
 
+  // Filter handling functions
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prevFilters => {
+      const newFilters = { ...prevFilters };
+      
+      // Type-safe approach using specific keys
+      if (key === 'leave_type_id') {
+        if (value === 'all') {
+          delete newFilters.leave_type_id;
+        } else {
+          newFilters.leave_type_id = parseInt(value, 10);
+        }
+      } else if (key === 'status') {
+        if (value === 'all') {
+          delete newFilters.status;
+        } else {
+          newFilters.status = value;
+        }
+      } else if (key === 'start_date') {
+        if (value === '') {
+          delete newFilters.start_date;
+        } else {
+          newFilters.start_date = value;
+        }
+      } else if (key === 'end_date') {
+        if (value === '') {
+          delete newFilters.end_date;
+        } else {
+          newFilters.end_date = value;
+        }
+      } else if (key === 'employee_id') {
+        if (value === 'all' || value === '') {
+          delete newFilters.employee_id;
+        } else {
+          newFilters.employee_id = parseInt(value, 10);
+        }
+      }
+      
+      console.log('newFilters', newFilters);
+      return newFilters;
+    });
+    
+    // Reset to page 1 when filters change
+    setPagination(prevPagination => ({...prevPagination, page: 1}));
+  };
+
+  const resetFilters = () => {
+    setFilters({} as UIFilters);
+    setPagination(prevPagination => ({...prevPagination, page: 1}));
+  };
+
+  // Handle pagination changes
+  const handlePageChange = (newPage: number) => {
+    if (newPage === pagination.page) return;
+    setPagination(prevPagination => ({...prevPagination, page: newPage}));
+  };
+
+  // Request action handlers
   const handleView = (request: LeaveRequest) => {
-    setSelectedRequest(request)
-    setIsViewDialogOpen(true)
+    setSelectedRequest(request);
+    setIsViewDialogOpen(true);
   }
 
   const handleApprove = (request: LeaveRequest) => {
-    setSelectedRequest(request)
-    setIsApproveDialogOpen(true)
+    setSelectedRequest(request);
+    setIsApproveDialogOpen(true);
   }
 
   const handleReject = (request: LeaveRequest) => {
-    setSelectedRequest(request)
-    setIsRejectDialogOpen(true)
+    setSelectedRequest(request);
+    setIsRejectDialogOpen(true);
   }
 
   const confirmApprove = async () => {
-    if (!selectedRequest) return
+    if (!selectedRequest) return;
     
     try {
-      await api.post(
-        `/leave-requests/${selectedRequest.id}/approve`,
-        {}
-      );
+      await approveLeaveRequest(selectedRequest.id);
       
       toast.success("申請已核准", {
         description: `請假申請 ${selectedRequest.request_id} 已成功核准。`,
@@ -156,19 +275,16 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
   }
 
   const confirmReject = async () => {
-    if (!selectedRequest) return
+    if (!selectedRequest) return;
     if (!rejectReason) {
       toast.error("需要提供拒絕原因", {
         description: "請提供拒絕此申請的原因。",
-      })
-      return
+      });
+      return;
     }
 
     try {
-      await api.post(
-        `/leave-requests/${selectedRequest.id}/reject`,
-        { rejection_reason: rejectReason }
-      );
+      await rejectLeaveRequest(selectedRequest.id, rejectReason);
       
       toast.success("申請已拒絕", {
         description: `請假申請 ${selectedRequest.request_id} 已成功拒絕。`,
@@ -184,12 +300,7 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
     setRejectReason("");
   }
 
-  // Format the proxy person's name
-  const formatName = (person: ProxyUser | null | undefined) => {
-    if (!person) return '-';
-    return `${person.first_name} ${person.last_name}`;
-  };
-
+  // Loading and error states
   if (loading && leaveRequests.length === 0) {
     return <div className="text-center py-4">載入請假申請中...</div>;
   }
@@ -200,6 +311,33 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
 
   return (
     <>
+      {/* Header with title and filter button */}
+      <div className="mb-4 flex justify-between items-center">
+        <div className="flex gap-2">
+          <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-1">
+                <Filter className="h-4 w-4" />
+                篩選
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" side="bottom" className="w-80">
+              <FiltersComponent
+                type={type}
+                filters={filters}
+                leaveTypes={leaveTypes}
+                onFilterChange={handleFilterChange}
+                onResetFilters={resetFilters}
+                onClose={() => {
+                  setIsFilterOpen(false);
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+      
+      {/* Request Table */}
       <Table>
         <TableHeader>
           <TableRow>
@@ -225,7 +363,9 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
               <TableRow key={request.id}>
                 <TableCell className="font-medium">{request.request_id}</TableCell>
                 {(type === "pending-approval" || type === "team-requests") && (
-                  <TableCell>{request.user ? formatName(request.user) : "您"}</TableCell>
+                  <TableCell>
+                    {isTeamLeaveRequest(request) ? formatName(request.user) : "您"}
+                  </TableCell>
                 )}
                 <TableCell>{request.leave_type.name}</TableCell>
                 <TableCell>
@@ -291,8 +431,8 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
         <div className="flex justify-center items-center gap-4 mt-4">
           <Button 
             variant="outline" 
-            onClick={() => setPagination({...pagination, page: Math.max(1, pagination.page - 1)})}
-            disabled={pagination.page <= 1}
+            onClick={() => handlePageChange(pagination.page - 1)}
+            disabled={pagination.page <= 1 || isLeaveRequestsFetching}
           >
             上一頁
           </Button>
@@ -301,197 +441,39 @@ export function LeaveRequestsTable({ type }: LeaveRequestsTableProps) {
           </span>
           <Button 
             variant="outline" 
-            onClick={() => setPagination({...pagination, page: Math.min(pagination.total_pages, pagination.page + 1)})}
-            disabled={pagination.page >= pagination.total_pages}
+            onClick={() => handlePageChange(pagination.page + 1)}
+            disabled={pagination.page >= pagination.total_pages || isLeaveRequestsFetching}
           >
             下一頁
           </Button>
         </div>
       )}
 
-      {/* View Request Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>請假申請詳情</DialogTitle>
-            <DialogDescription>請假申請的詳細資訊。</DialogDescription>
-          </DialogHeader>
-          {selectedRequest && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">申請編號:</div>
-                <div className="col-span-2">{selectedRequest.request_id}</div>
-              </div>
-              {selectedRequest.user && (
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="font-medium">員工:</div>
-                  <div className="col-span-2">{formatName(selectedRequest.user)}</div>
-                </div>
-              )}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">假別:</div>
-                <div className="col-span-2">{selectedRequest.leave_type.name}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">期間:</div>
-                <div className="col-span-2">
-                  {selectedRequest.start_date} 至 {selectedRequest.end_date}
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">請假天數:</div>
-                <div className="col-span-2">{selectedRequest.days_count}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">請假原因:</div>
-                <div className="col-span-2">{selectedRequest.reason}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">狀態:</div>
-                <div className="col-span-2">
-                  <Badge
-                    variant={
-                      selectedRequest.status.toLowerCase() === "approved"
-                        ? "default"
-                        : selectedRequest.status.toLowerCase() === "rejected"
-                          ? "destructive"
-                          : "outline"
-                    }
-                  >
-                    {selectedRequest.status.toLowerCase() === "approved" 
-                      ? "已核准" 
-                      : selectedRequest.status.toLowerCase() === "rejected"
-                        ? "已拒絕"
-                        : selectedRequest.status.toLowerCase() === "pending"
-                          ? "審核中"
-                          : selectedRequest.status}
-                  </Badge>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">代理人:</div>
-                <div className="col-span-2">{formatName(selectedRequest.proxy_person)}</div>
-              </div>
-              {selectedRequest.approver && (
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="font-medium">審核人:</div>
-                  <div className="col-span-2">{formatName(selectedRequest.approver)}</div>
-                </div>
-              )}
-              {selectedRequest.rejection_reason && (
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="font-medium">拒絕原因:</div>
-                  <div className="col-span-2">{selectedRequest.rejection_reason}</div>
-                </div>
-              )}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">建立時間:</div>
-                <div className="col-span-2">{new Date(selectedRequest.created_at).toLocaleString()}</div>
-              </div>
-              {selectedRequest.approved_at && (
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="font-medium">核准時間:</div>
-                  <div className="col-span-2">{new Date(selectedRequest.approved_at).toLocaleString()}</div>
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter>
-            <Button onClick={() => setIsViewDialogOpen(false)}>關閉</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Approve Request Dialog */}
-      <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>核准請假申請</DialogTitle>
-            <DialogDescription>您確定要核准這個請假申請嗎？</DialogDescription>
-          </DialogHeader>
-          {selectedRequest && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">申請編號:</div>
-                <div className="col-span-2">{selectedRequest.request_id}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">員工:</div>
-                <div className="col-span-2">{selectedRequest.user ? formatName(selectedRequest.user) : "您"}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">假別:</div>
-                <div className="col-span-2">{selectedRequest.leave_type.name}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">期間:</div>
-                <div className="col-span-2">
-                  {selectedRequest.start_date} 至 {selectedRequest.end_date}
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">請假天數:</div>
-                <div className="col-span-2">{selectedRequest.days_count}</div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={confirmApprove}>核准</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reject Request Dialog */}
-      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>拒絕請假申請</DialogTitle>
-            <DialogDescription>請提供拒絕這個請假申請的理由。</DialogDescription>
-          </DialogHeader>
-          {selectedRequest && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">申請編號:</div>
-                <div className="col-span-2">{selectedRequest.request_id}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">員工:</div>
-                <div className="col-span-2">{selectedRequest.user ? formatName(selectedRequest.user) : "您"}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">假別:</div>
-                <div className="col-span-2">{selectedRequest.leave_type.name}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">期間:</div>
-                <div className="col-span-2">
-                  {selectedRequest.start_date} 至 {selectedRequest.end_date}
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <div className="font-medium">拒絕原因:</div>
-                <Textarea
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="請提供拒絕此申請的原因"
-                  className="resize-none"
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
-              取消
-            </Button>
-            <Button variant="destructive" onClick={confirmReject}>
-              拒絕
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Dialogs */}
+      <ViewRequestDialog 
+        isOpen={isViewDialogOpen}
+        onOpenChange={setIsViewDialogOpen}
+        request={selectedRequest}
+        formatName={formatName}
+      />
+      
+      <ApproveRequestDialog
+        isOpen={isApproveDialogOpen}
+        onOpenChange={setIsApproveDialogOpen}
+        request={selectedRequest}
+        formatName={formatName}
+        onConfirm={confirmApprove}
+      />
+      
+      <RejectRequestDialog
+        isOpen={isRejectDialogOpen}
+        onOpenChange={setIsRejectDialogOpen}
+        request={selectedRequest}
+        formatName={formatName}
+        rejectReason={rejectReason}
+        onRejectReasonChange={setRejectReason}
+        onConfirm={confirmReject}
+      />
     </>
   )
 }
