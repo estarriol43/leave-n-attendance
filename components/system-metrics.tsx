@@ -140,10 +140,10 @@ export function SystemMetrics() {
 
       <Tabs defaultValue="cpu">
         <TabsList>
-          <TabsTrigger value="cpu">CPU Usage</TabsTrigger>
-          <TabsTrigger value="memory">Memory Usage</TabsTrigger>
-          <TabsTrigger value="api">API Response Time</TabsTrigger>
-          <TabsTrigger value="error">Error Rate</TabsTrigger>
+          <TabsTrigger value="cpu">CPU 使用率</TabsTrigger>
+          <TabsTrigger value="memory">記憶體使用率</TabsTrigger>
+          <TabsTrigger value="api">API 回應時間</TabsTrigger>
+          <TabsTrigger value="error">錯誤率</TabsTrigger>
         </TabsList>
         <TabsContent value="cpu" className="mt-4">
           <Card>
@@ -152,7 +152,7 @@ export function SystemMetrics() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={cpuData}>
                     <XAxis dataKey="time" />
-                    <YAxis label={{ value: "CPU Usage (%)", angle: -90, position: "insideLeft" }} domain={[0, 100]} />
+                    <YAxis label={{ value: "CPU 使用率 (%)", angle: -90, position: "insideLeft" }} domain={[0, 100]} />
                     <Tooltip />
                     <Line type="monotone" dataKey="value" stroke="#8884d8" strokeWidth={2} />
                   </LineChart>
@@ -169,7 +169,7 @@ export function SystemMetrics() {
                   <LineChart data={memoryData}>
                     <XAxis dataKey="time" />
                     <YAxis
-                      label={{ value: "Memory Usage (%)", angle: -90, position: "insideLeft" }}
+                      label={{ value: "記憶體使用率 (%)", angle: -90, position: "insideLeft" }}
                       domain={[0, 100]}
                     />
                     <Tooltip />
@@ -187,7 +187,7 @@ export function SystemMetrics() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={apiResponseData}>
                     <XAxis dataKey="time" />
-                    <YAxis label={{ value: "Response Time (ms)", angle: -90, position: "insideLeft" }} />
+                    <YAxis label={{ value: "回應時間 (毫秒)", angle: -90, position: "insideLeft" }} />
                     <Tooltip />
                     <Line type="monotone" dataKey="value" stroke="#ff7300" strokeWidth={2} />
                   </LineChart>
@@ -204,11 +204,11 @@ export function SystemMetrics() {
                   <LineChart data={errorRateData}>
                     <XAxis dataKey="time" />
                     <YAxis
-                      label={{ value: "Error Rate (%)", angle: -90, position: "insideLeft" }}
+                      label={{ value: "錯誤率 (%)", angle: -90, position: "insideLeft" }}
                       domain={[0, 0.2]}
                       tickFormatter={(value) => `${value * 100}`}
                     />
-                    <Tooltip formatter={(value: number) => [`${value * 100}%`, "Error Rate"]} />
+                    <Tooltip formatter={(value: number) => [`${value * 100}%`, "錯誤率"]} />
                     <Line type="monotone" dataKey="value" stroke="#ff0000" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>

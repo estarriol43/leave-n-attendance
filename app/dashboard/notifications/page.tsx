@@ -4,69 +4,85 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Bell, CheckCheck, MailOpen } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "sonner"
+import {
+  type Notification,
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead
+} from "@/lib/services/notification-service"
+import { Skeleton } from "@/components/ui/skeleton"
 
-// Mock data based on API spec
-const notificationsData = {
-  notifications: [
-    {
-      id: 1,
-      title: "Leave Request Approved",
-      message: "Your leave request (REQ-001) has been approved by Jane Smith.",
-      related_to: "leave_request",
-      related_id: 1,
-      is_read: false,
-      created_at: "2023-10-10T14:35:00Z"
-    },
-    {
-      id: 2,
-      title: "New Leave Request",
-      message: "John Doe has submitted a new leave request (REQ-003) for your approval.",
-      related_to: "leave_request",
-      related_id: 3,
-      is_read: true,
-      created_at: "2023-10-05T09:20:00Z"
-    },
-    {
-      id: 3,
-      title: "Leave Request Rejected",
-      message: "Your leave request (REQ-004) has been rejected by Jane Smith. Reason: Critical project deadline.",
-      related_to: "leave_request",
-      related_id: 4,
-      is_read: false,
-      created_at: "2023-10-16T11:50:00Z"
-    },
-    {
-      id: 4,
-      title: "Team Member on Leave",
-      message: "Alice Johnson will be on leave from Oct 15 to Oct 18.",
-      related_to: "team_calendar",
-      related_id: 2,
-      is_read: true,
-      created_at: "2023-10-12T10:15:00Z"
-    },
-    {
-      id: 5,
-      title: "Leave Balance Updated",
-      message: "Your annual leave balance has been updated. You have 5 days remaining.",
-      related_to: "leave_balance",
-      related_id: 1,
-      is_read: false,
-      created_at: "2023-10-08T08:30:00Z"
-    }
-  ],
-  pagination: {
-    total: 5,
-    page: 1,
-    per_page: 10,
-    total_pages: 1
-  }
+// Skeleton component for a single notification
+function NotificationSkeleton() {
+  return (
+    <div className="px-6 py-5">
+      <div className="flex justify-between items-start gap-4 mb-2">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-4 w-16" />
+      </div>
+      <Skeleton className="h-4 w-full mb-2" />
+      <Skeleton className="h-4 w-3/4 mb-4" />
+      <div className="flex justify-between items-center gap-4">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-8 w-32" />
+      </div>
+    </div>
+  )
+}
+
+// Skeleton component for notifications list
+function NotificationsListSkeleton() {
+  return (
+    <div className="divide-y divide-border -mx-6">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <NotificationSkeleton key={index} />
+      ))}
+    </div>
+  )
 }
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState(notificationsData.notifications)
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [activeTab, setActiveTab] = useState("all")
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    per_page: 10,
+    total_pages: 0
+  })
+  
+  // Fetch notifications from API
+  useEffect(() => {
+    fetchNotifications()
+  }, [activeTab])
+  
+  const fetchNotifications = async () => {
+    setLoading(true)
+    setError(null)
+    
+    try {
+      // Prepare query parameters based on active tab
+      const params = {
+        page: pagination.page,
+        per_page: pagination.per_page,
+        unread_only: activeTab === "unread"
+      }
+      
+      const response = await getNotifications(params)
+      setNotifications(response.notifications)
+      setPagination(response.pagination)
+    } catch (err) {
+      console.error('Error fetching notifications:', err)
+      setError('Failed to fetch notifications. Please try again later.')
+      toast.error('Failed to fetch notifications')
+    } finally {
+      setLoading(false)
+    }
+  }
   
   // Filter notifications based on active tab
   const filteredNotifications = notifications.filter(notification => {
@@ -76,31 +92,45 @@ export default function NotificationsPage() {
   })
   
   // Mark a single notification as read
-  const markAsRead = (id: number) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, is_read: true } 
-          : notification
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      await markNotificationAsRead(id)
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === id 
+            ? { ...notification, is_read: true } 
+            : notification
+        )
       )
-    )
-    
-    // Simulate API call
-    toast("Notification marked as read", {
-      description: "The notification has been marked as read successfully."
-    })
+      
+      toast("Notification marked as read", {
+        description: "The notification has been marked as read successfully."
+      })
+    } catch (err) {
+      console.error('Error marking notification as read:', err)
+      toast.error('Failed to mark notification as read')
+    }
   }
   
   // Mark all notifications as read
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, is_read: true }))
-    )
-    
-    // Simulate API call
-    toast("All notifications marked as read", {
-      description: `${notifications.filter(n => !n.is_read).length} notifications marked as read successfully.`
-    })
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllNotificationsAsRead()
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => ({ ...notification, is_read: true }))
+      )
+      
+      toast("All notifications marked as read", {
+        description: `${notifications.filter(n => !n.is_read).length} notifications marked as read successfully.`
+      })
+    } catch (err) {
+      console.error('Error marking all notifications as read:', err)
+      toast.error('Failed to mark all notifications as read')
+    }
   }
   
   // Format date to relative time (e.g., "2 hours ago")
@@ -125,9 +155,9 @@ export default function NotificationsPage() {
   }
   
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+    <div className="flex flex-col gap-8 max-w-5xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
           <p className="text-muted-foreground">
             View and manage your notifications
@@ -135,34 +165,41 @@ export default function NotificationsPage() {
         </div>
         <Button 
           variant="outline"
-          onClick={markAllAsRead}
-          disabled={!notifications.some(n => !n.is_read)}
+          onClick={handleMarkAllAsRead}
+          disabled={loading || !notifications.some(n => !n.is_read)}
+          className="sm:w-auto w-full"
         >
           <CheckCheck className="mr-2 h-4 w-4" />
           Mark All as Read
         </Button>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
+      <Card className="shadow-sm">
+        <CardHeader className="pb-4">
           <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="unread">
+              <TabsTrigger value="all" disabled={loading}>All</TabsTrigger>
+              <TabsTrigger value="unread" disabled={loading}>
                 Unread
                 {notifications.filter(n => !n.is_read).length > 0 && (
-                  <span className="ml-2 rounded-full bg-primary text-primary-foreground px-2 py-0.5 text-xs">
+                  <span className="ml-2 rounded-full bg-primary text-primary-foreground px-2.5 py-0.5 text-xs">
                     {notifications.filter(n => !n.is_read).length}
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="read">Read</TabsTrigger>
+              <TabsTrigger value="read" disabled={loading}>Read</TabsTrigger>
             </TabsList>
           </Tabs>
         </CardHeader>
         <CardContent>
-          {filteredNotifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-8 text-center">
+          {loading ? (
+            <NotificationsListSkeleton />
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center text-red-500">
+              <p>{error}</p>
+            </div>
+          ) : filteredNotifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
               <Bell className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">No notifications</h3>
               <p className="text-sm text-muted-foreground mt-2">
@@ -174,24 +211,51 @@ export default function NotificationsPage() {
               </p>
             </div>
           ) : (
-            <div className="divide-y">
+            <div className="divide-y divide-border -mx-6">
               {filteredNotifications.map((notification) => (
-                <div key={notification.id} className={`py-4 ${!notification.is_read ? "bg-muted/50" : ""}`}>
-                  <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-medium">{notification.title}</h3>
-                    <span className="text-xs text-muted-foreground">
+                <div 
+                  key={notification.id} 
+                  className={`px-6 py-5 transition-colors ${
+                    !notification.is_read 
+                      ? "bg-muted/50 hover:bg-muted/70" 
+                      : "hover:bg-muted/10"
+                  }`}
+                >
+                  <div className="flex justify-between items-start gap-4 mb-2">
+                    <h3 className="font-medium leading-tight">{notification.title}</h3>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {formatRelativeTime(notification.created_at)}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-3">{notification.message}</p>
-                  <div className="flex justify-between items-center">
+                  <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                    {notification.message}
+                  </p>
+                  <div className="flex justify-between items-center gap-4">
                     <Button 
                       variant="link" 
                       className="p-0 h-auto text-sm"
                       onClick={() => {
-                        // Here you would navigate to the related item
+                        // Navigate to the related item
+                        let path = '/dashboard';
+                        
+                        // Determine appropriate path based on related_to value
+                        switch (notification.related_to) {
+                          case 'leave_request':
+                            path = `/dashboard/leave-requests/${notification.related_id}`;
+                            break;
+                          case 'team_calendar':
+                            path = '/dashboard/calendar';
+                            break;
+                          case 'leave_balance':
+                            path = '/dashboard/profile';
+                            break;
+                          default:
+                            path = '/dashboard';
+                        }
+                        
+                        // For now just show a toast, this would be replaced with actual navigation
                         toast("Navigating to related item", {
-                          description: `Going to ${notification.related_to} with ID ${notification.related_id}`,
+                          description: `Going to ${path}`,
                         })
                       }}
                     >
@@ -201,7 +265,8 @@ export default function NotificationsPage() {
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => markAsRead(notification.id)}
+                        onClick={() => handleMarkAsRead(notification.id)}
+                        className="hover:bg-background/80"
                       >
                         <MailOpen className="h-4 w-4 mr-2" />
                         Mark as Read
@@ -213,9 +278,9 @@ export default function NotificationsPage() {
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between border-t pt-5">
+        <CardFooter className="flex justify-between border-t py-6">
           <div className="text-sm text-muted-foreground">
-            Showing {filteredNotifications.length} of {notificationsData.pagination.total} notifications
+            Showing {filteredNotifications.length} of {pagination.total} notifications
           </div>
           {/* Add pagination controls here if needed */}
         </CardFooter>

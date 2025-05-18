@@ -24,50 +24,50 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 const auditLogs = [
   {
     id: "LOG-001",
-    action: "Login",
+    action: "登入",
     user: "john.doe@example.com",
     timestamp: "2023-10-15 14:32:45",
-    details: "User logged in successfully",
+    details: "使用者成功登入",
     ip: "192.168.1.1",
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
   },
   {
     id: "LOG-002",
-    action: "Leave Request",
+    action: "請假申請",
     user: "john.doe@example.com",
     timestamp: "2023-10-15 14:45:22",
-    details: "Created leave request REQ-004",
+    details: "建立請假申請 REQ-004",
     ip: "192.168.1.1",
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
   },
   {
     id: "LOG-003",
-    action: "Leave Approval",
+    action: "請假核准",
     user: "jane.smith@example.com",
     timestamp: "2023-10-15 15:10:18",
-    details: "Approved leave request REQ-003",
+    details: "核准請假申請 REQ-003",
     ip: "192.168.1.2",
     userAgent:
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
   },
   {
     id: "LOG-004",
-    action: "Leave Rejection",
+    action: "請假拒絕",
     user: "jane.smith@example.com",
     timestamp: "2023-10-15 15:15:33",
-    details: "Rejected leave request REQ-002 with reason: Critical project deadline",
+    details: "拒絕請假申請 REQ-002，原因：專案關鍵期限",
     ip: "192.168.1.2",
     userAgent:
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
   },
   {
     id: "LOG-005",
-    action: "Logout",
+    action: "登出",
     user: "john.doe@example.com",
     timestamp: "2023-10-15 16:30:45",
-    details: "User logged out",
+    details: "使用者登出",
     ip: "192.168.1.1",
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -100,7 +100,7 @@ export function AuditLogs() {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
               <Filter className="mr-2 h-4 w-4" />
-              Filter
+              篩選
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -120,12 +120,12 @@ export function AuditLogs() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Log ID</TableHead>
-            <TableHead>Action</TableHead>
-            <TableHead>User</TableHead>
-            <TableHead>Timestamp</TableHead>
-            <TableHead>Details</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>日誌 ID</TableHead>
+            <TableHead>操作</TableHead>
+            <TableHead>使用者</TableHead>
+            <TableHead>時間戳記</TableHead>
+            <TableHead>詳細資訊</TableHead>
+            <TableHead className="text-right">操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -141,7 +141,7 @@ export function AuditLogs() {
               <TableCell className="text-right">
                 <Button variant="ghost" size="icon" onClick={() => handleView(log)}>
                   <Eye className="h-4 w-4" />
-                  <span className="sr-only">View</span>
+                  <span className="sr-only">查看</span>
                 </Button>
               </TableCell>
             </TableRow>
@@ -153,45 +153,45 @@ export function AuditLogs() {
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Audit Log Details</DialogTitle>
-            <DialogDescription>Detailed information about the audit log.</DialogDescription>
+            <DialogTitle>審計日誌詳情</DialogTitle>
+            <DialogDescription>有關審計日誌的詳細資訊。</DialogDescription>
           </DialogHeader>
           {selectedLog && (
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">Log ID:</div>
+                <div className="font-medium">日誌 ID:</div>
                 <div className="col-span-2">{selectedLog.id}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">Action:</div>
+                <div className="font-medium">操作:</div>
                 <div className="col-span-2">
                   <Badge variant="outline">{selectedLog.action}</Badge>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">User:</div>
+                <div className="font-medium">使用者:</div>
                 <div className="col-span-2">{selectedLog.user}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">Timestamp:</div>
+                <div className="font-medium">時間戳記:</div>
                 <div className="col-span-2">{selectedLog.timestamp}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">Details:</div>
+                <div className="font-medium">詳細資訊:</div>
                 <div className="col-span-2">{selectedLog.details}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">IP Address:</div>
+                <div className="font-medium">IP 位址:</div>
                 <div className="col-span-2">{selectedLog.ip}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div className="font-medium">User Agent:</div>
+                <div className="font-medium">用戶代理:</div>
                 <div className="col-span-2 break-words text-xs">{selectedLog.userAgent}</div>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => setIsViewDialogOpen(false)}>Close</Button>
+            <Button onClick={() => setIsViewDialogOpen(false)}>關閉</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

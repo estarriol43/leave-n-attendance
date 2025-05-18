@@ -12,11 +12,11 @@ import {
 } from "@/components/ui/sidebar"
 
 const items = [
-  { title: "Dashboard", url: "/dashboard", icon: Home },
-  { title: "Leave Requests", url: "/dashboard/leave-requests", icon: ClipboardList },
-  { title: "Calendar", url: "/dashboard/calendar", icon: Calendar },
-  { title: "Team", url: "/dashboard/team", icon: Users },
-  { title: "Notifications", url: "/dashboard/notifications", icon: Bell },
+  { title: "儀表板", url: "/dashboard", icon: Home },
+  { title: "請假申請", url: "/dashboard/leave-requests", icon: ClipboardList },
+  { title: "行事曆", url: "/dashboard/calendar", icon: Calendar },
+  { title: "團隊", url: "/dashboard/team", icon: Users },
+  { title: "通知", url: "/dashboard/notifications", icon: Bell },
 ]
 
 export function AppSidebar() {
@@ -24,7 +24,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Leave & Attendance System</SidebarGroupLabel>
+          <SidebarGroupLabel>請假與考勤系統</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (

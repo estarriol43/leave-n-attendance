@@ -10,28 +10,28 @@ export default function LeaveRequestsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Leave Requests</h1>
-          <p className="text-muted-foreground">Manage your leave requests and approvals</p>
+          <h1 className="text-3xl font-bold tracking-tight">請假申請</h1>
+          <p className="text-muted-foreground">管理您的請假申請與核准</p>
         </div>
         <Button asChild>
           <Link href="/dashboard/leave-requests/new">
             <Plus className="mr-2 h-4 w-4" />
-            New Request
+            新增申請
           </Link>
         </Button>
       </div>
 
       <Tabs defaultValue="my-requests">
         <TabsList>
-          <TabsTrigger value="my-requests">My Requests</TabsTrigger>
-          <TabsTrigger value="pending-approval">Pending Approval</TabsTrigger>
-          <TabsTrigger value="team-requests">Team Requests</TabsTrigger>
+          <TabsTrigger value="my-requests">我的申請</TabsTrigger>
+          <TabsTrigger value="pending-approval">待核准</TabsTrigger>
+          <TabsTrigger value="team-requests">團隊申請</TabsTrigger>
         </TabsList>
         <TabsContent value="my-requests" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>My Leave Requests</CardTitle>
-              <CardDescription>View and manage your leave requests</CardDescription>
+              <CardTitle>我的請假申請</CardTitle>
+              <CardDescription>查看和管理您的請假申請</CardDescription>
             </CardHeader>
             <CardContent>
               <LeaveRequestsTable type="my-requests" />
@@ -41,8 +41,8 @@ export default function LeaveRequestsPage() {
         <TabsContent value="pending-approval" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Pending Approval</CardTitle>
-              <CardDescription>Leave requests waiting for your approval</CardDescription>
+              <CardTitle>待核准申請</CardTitle>
+              <CardDescription>等待您核准的請假申請</CardDescription>
             </CardHeader>
             <CardContent>
               <LeaveRequestsTable type="pending-approval" />
@@ -52,8 +52,8 @@ export default function LeaveRequestsPage() {
         <TabsContent value="team-requests" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Team Requests</CardTitle>
-              <CardDescription>View all leave requests from your team</CardDescription>
+              <CardTitle>團隊申請</CardTitle>
+              <CardDescription>查看團隊所有的請假申請</CardDescription>
             </CardHeader>
             <CardContent>
               <LeaveRequestsTable type="team-requests" />

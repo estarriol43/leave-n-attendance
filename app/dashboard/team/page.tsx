@@ -1,125 +1,121 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { TeamMember, TeamMemberCard } from "@/components/team-member-card"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-
-
-// Sample team data
-const teamMembers = [
-  {
-    id: "1",
-    name: "John Doe",
-    position: "Software Engineer",
-    email: "john.doe@example.com",
-    avatar: "/placeholder.svg?height=100&width=100&text=JD",
-    department: "Engineering",
-    status: "Available",
-  },
-  {
-    id: "2",
-    name: "Alice Smith",
-    position: "Product Manager",
-    email: "alice.smith@example.com",
-    avatar: "/placeholder.svg?height=100&width=100&text=AS",
-    department: "Product",
-    status: "On Leave",
-    leaveType: "Sick Leave",
-    leaveUntil: "Oct 19, 2023",
-  },
-  {
-    id: "3",
-    name: "Tom Wilson",
-    position: "UX Designer",
-    email: "tom.wilson@example.com",
-    avatar: "/placeholder.svg?height=100&width=100&text=TW",
-    department: "Design",
-    status: "On Leave",
-    leaveType: "Personal Leave",
-    leaveUntil: "Oct 17, 2023",
-  },
-  {
-    id: "4",
-    name: "Mary Roberts",
-    position: "Frontend Developer",
-    email: "mary.roberts@example.com",
-    avatar: "/placeholder.svg?height=100&width=100&text=MR",
-    department: "Engineering",
-    status: "Available",
-  },
-  {
-    id: "5",
-    name: "Kevin Lee",
-    position: "Backend Developer",
-    email: "kevin.lee@example.com",
-    avatar: "/placeholder.svg?height=100&width=100&text=KL",
-    department: "Engineering",
-    status: "Available",
-  },
-  {
-    id: "6",
-    name: "Patricia Quinn",
-    position: "QA Engineer",
-    email: "patricia.quinn@example.com",
-    avatar: "/placeholder.svg?height=100&width=100&text=PQ",
-    department: "Engineering",
-    status: "Available",
-  },
-  {
-    id: "7",
-    name: "Michael Johnson",
-    position: "DevOps Engineer",
-    email: "michael.johnson@example.com",
-    avatar: "/placeholder.svg?height=100&width=100&text=MJ",
-    department: "Operations",
-    status: "Available",
-  },
-  {
-    id: "8",
-    name: "Sarah Davis",
-    position: "HR Manager",
-    email: "sarah.davis@example.com",
-    avatar: "/placeholder.svg?height=100&width=100&text=SD",
-    department: "HR",
-    status: "Available",
-  },
-]
-
-const departments = ["All", "Engineering", "Product", "Design", "Operations", "HR"]
+import { getTeamMembers, TeamMemberResponse } from "@/lib/services/team-service"
+import { getTeamLeaveRequests, LeaveRequestTeamItem, isOnLeave } from "@/lib/services/leave-service"
+import { formatDate } from "@/lib/utils"
+import { getCurrentUser, UserProfile } from "@/lib/services/user-service"
 
 export default function TeamPage() {
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequestTeamItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [departments, setDepartments] = useState<string[]>([])
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null)
+  
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true)
+        
+        // Fetch current user profile
+        const userProfile = await getCurrentUser()
+        setCurrentUser(userProfile)
+        
+        // Fetch team members
+        const teamData = await getTeamMembers()
+        
+        // Fetch leave requests
+        const leaveData = await getTeamLeaveRequests({
+          status: 'approved' // Only get approved leave requests
+        })
+        
+        setLeaveRequests(leaveData.leave_requests)
+        
+        // Transform team data to match our component's expected format
+        const processedTeamMembers = teamData.team_members.map(member => {
+          // Check if the member is currently on leave
+          const memberLeaveStatus = isOnLeave(member.id, leaveData.leave_requests)
+          
+          return {
+            id: member.id,
+            employee_id: member.employee_id,
+            first_name: member.first_name,
+            last_name: member.last_name,
+            position: member.position,
+            email: member.email,
+            department: member.department.name,
+            status: memberLeaveStatus.isOnLeave ? "On Leave" : "Available",
+            leaveType: memberLeaveStatus.leaveType,
+            leaveUntil: memberLeaveStatus.endDate,
+            isCurrentUser: member.id === userProfile.id
+          } as TeamMember
+        })
+        
+        // Add current user to team members if not already included
+        const currentUserInTeam = processedTeamMembers.some(member => member.id === userProfile.id)
+        
+        if (!currentUserInTeam) {
+          // Check if current user is on leave
+          const userLeaveStatus = isOnLeave(userProfile.id, leaveData.leave_requests)
+          
+          // Add current user to team members list
+          processedTeamMembers.push({
+            id: userProfile.id,
+            employee_id: userProfile.employee_id,
+            first_name: userProfile.first_name,
+            last_name: userProfile.last_name,
+            position: userProfile.position,
+            email: userProfile.email,
+            department: userProfile.department.name,
+            status: userLeaveStatus.isOnLeave ? "On Leave" : "Available",
+            leaveType: userLeaveStatus.leaveType,
+            leaveUntil: userLeaveStatus.endDate,
+            isCurrentUser: true
+          })
+        }
+        
+        setTeamMembers(processedTeamMembers)
+        
+        // Extract unique departments
+        const deptSet = new Set<string>()
+        processedTeamMembers.forEach(member => {
+          if (member.department) {
+            deptSet.add(member.department)
+          }
+        })
+        
+        // Add "All" at the beginning of departments list
+        setDepartments(['All', ...Array.from(deptSet)])
+      } catch (err) {
+        console.error('Error fetching team data:', err)
+        setError('Failed to load team data. Please try again later.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchData()
+  }, [])
+  
+  if (loading) {
+    return <div className="flex justify-center items-center h-96">Loading team data...</div>
+  }
+  
+  if (error) {
+    return <div className="text-red-500 p-4">{error}</div>
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Team</h1>
         <p className="text-muted-foreground">View team members and their current status</p>
       </div>
-
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Team Overview</CardTitle>
-          <CardDescription>Current team status and availability</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 md:grid-cols-4">
-            <div className="flex flex-col items-center justify-center p-4 border rounded-lg">
-              <div className="text-3xl font-bold">{teamMembers.length}</div>
-              <div className="text-sm text-muted-foreground">Total Members</div>
-            </div>
-            <div className="flex flex-col items-center justify-center p-4 border rounded-lg">
-              <div className="text-3xl font-bold">{teamMembers.filter((m) => m.status === "Available").length}</div>
-              <div className="text-sm text-muted-foreground">Available</div>
-            </div>
-            <div className="flex flex-col items-center justify-center p-4 border rounded-lg">
-              <div className="text-3xl font-bold">{teamMembers.filter((m) => m.status === "On Leave").length}</div>
-              <div className="text-sm text-muted-foreground">On Leave</div>
-            </div>
-            <div className="flex flex-col items-center justify-center p-4 border rounded-lg">
-              <div className="text-3xl font-bold">{new Set(teamMembers.map((m) => m.department)).size}</div>
-              <div className="text-sm text-muted-foreground">Departments</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <Tabs defaultValue="All">
         <TabsList className="mb-4">
@@ -136,7 +132,7 @@ export default function TeamPage() {
               {teamMembers
                 .filter((member) => dept === "All" || member.department === dept)
                 .map((member) => (
-                  <TeamMemberCard key={member.id} member={member as TeamMember} />
+                  <TeamMemberCard key={member.id} member={member} />
                 ))}
             </div>
           </TabsContent>

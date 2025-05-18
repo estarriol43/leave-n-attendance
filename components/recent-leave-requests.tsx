@@ -1,104 +1,123 @@
 'use client'
 
-import { useEffect, useState } from "react"
-import api from "@/lib/api"
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Skeleton } from "@/components/ui/skeleton"
+import { 
+  getRecentLeaveRequests, 
+  LeaveRequestListResponse,
+  type LeaveTypeBasic,
+  type ProxyUserOut,
+  type LeaveRequestListItem,
+  type PaginationMeta
+} from "@/lib/services/leave-request-service"
 
-interface LeaveType {
-  id: number
-  name: string
-}
-
-interface Approver {
-  id: number
-  first_name: string
-  last_name: string
-}
-
-interface LeaveRequest {
-  id: number
-  request_id: string
-  leave_type: LeaveType
-  start_date: string
-  end_date: string
-  status: string
-  approver?: Approver | null
+// Skeleton component defined inline
+function RecentLeaveRequestsSkeleton() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="space-y-1">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+          <Skeleton className="h-6 w-20" />
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export function RecentLeaveRequests() {
-  const [requests, setRequests] = useState<LeaveRequest[]>([])
+  const [data, setData] = useState<LeaveRequestListResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    setLoading(true)
-    api.get("/leave-requests")
-      .then(res => {
-        if (res.data && res.data.leave_requests) {
-          setRequests(res.data.leave_requests)
-        } else {
-          console.warn('回應格式不符合預期:', res.data)
-          setRequests([])
-        }
-        setError(null)
-      })
-      .catch(err => {
-        console.error('取得請假紀錄失敗:', err)
-        setError(`無法取得請假紀錄: ${err.message}`)
-      })
-      .finally(() => setLoading(false))
+    const fetchRecentRequests = async () => {
+      try {
+        setLoading(true)
+        const responseData = await getRecentLeaveRequests(5)
+        setData(responseData)
+      } catch (err) {
+        console.error('Failed to fetch recent leave requests:', err)
+        setError('無法載入最近的請假紀錄')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchRecentRequests()
   }, [])
 
-  if (loading) return <div className="p-4 text-muted-foreground">載入中...</div>
-  if (error) return <div className="p-4 text-destructive">{error}</div>
+  if (error) {
+    return (
+      <div className="text-sm text-red-500">
+        <p>{error}</p>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return <RecentLeaveRequestsSkeleton />
+  }
+
+  if (!data) return null
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Request ID</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Period</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Approver</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {requests.length === 0 ? (
-          <TableRow>
-            <TableCell colSpan={5} className="text-center text-muted-foreground">無請假紀錄</TableCell>
-          </TableRow>
-        ) : (
-          requests.map((request) => (
-            <TableRow key={request.id}>
-              <TableCell className="font-medium">{request.request_id}</TableCell>
-              <TableCell>{request.leave_type?.name}</TableCell>
-              <TableCell>
-                {request.start_date} to {request.end_date}
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant={
-                    request.status === "Approved"
-                      ? "default"
-                      : request.status === "Rejected"
-                      ? "destructive"
-                      : "outline"
-                  }
-                >
-                  {request.status}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                {request.approver
-                  ? `${request.approver.first_name} ${request.approver.last_name}`
-                  : "-"}
-              </TableCell>
-            </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+    <div className="space-y-4">
+      {data.leave_requests.length === 0 ? (
+        <div className="text-sm text-muted-foreground">無近期請假申請</div>
+      ) : (
+        data.leave_requests.map((request) => (
+          <div key={request.id} className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar>
+                <AvatarFallback>
+                  {request.proxy_person.first_name[0]}
+                  {request.proxy_person.last_name[0]}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="font-medium">
+                  {request.proxy_person.first_name} {request.proxy_person.last_name}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {request.leave_type.name} • {request.start_date} 至 {request.end_date}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {request.approver ? (
+                    <span>審核人: {request.approver.first_name} {request.approver.last_name} • </span>
+                  ) : null}
+                  <span>申請時間: {new Date(request.created_at).toLocaleDateString('zh-TW')}</span>
+                </div>
+              </div>
+            </div>
+            <Badge
+              variant={
+                request.status.toLowerCase() === "approved"
+                  ? "default"
+                  : request.status.toLowerCase() === "rejected"
+                    ? "destructive"
+                    : "outline"
+              }
+            >
+              {request.status.toLowerCase() === "approved" 
+                ? "已核准" 
+                : request.status.toLowerCase() === "rejected"
+                  ? "已拒絕"
+                  : request.status.toLowerCase() === "pending"
+                    ? "審核中"
+                    : request.status}
+            </Badge>
+          </div>
+        ))
+      )}
+    </div>
   )
-}
+} 

@@ -1,26 +1,62 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { getTeamMembersOnLeaveToday, LeaveRequestTeamItem } from "@/app/services/team"
+import { Skeleton } from "@/components/ui/skeleton"
+import { 
+  getTeamMembersOnLeaveToday, 
+  type MemberOnLeave 
+} from "@/lib/services/calendar-service"
+
+// Skeleton component defined inline
+function TeamAvailabilitySkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-32" />
+        <div className="flex gap-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-6 w-16" />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function TeamAvailability() {
-  const [isLoading, setIsLoading] = useState(true)
+  const [membersOnLeave, setMembersOnLeave] = useState<MemberOnLeave[]>([])
   const [totalMembers, setTotalMembers] = useState(0)
-  const [onLeaveMembers, setOnLeaveMembers] = useState<LeaveRequestTeamItem[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchTeamAvailability = async () => {
       try {
-        setIsLoading(true)
+        setLoading(true)
         const data = await getTeamMembersOnLeaveToday()
+        setMembersOnLeave(data.membersOnLeave)
         setTotalMembers(data.totalMembers)
-        setOnLeaveMembers(data.onLeaveMembers)
       } catch (err) {
         setError("無法載入團隊資料")
         console.error(err)
       } finally {
-        setIsLoading(false)
+        setLoading(false)
       }
     }
 
@@ -35,36 +71,44 @@ export function TeamAvailability() {
     )
   }
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-8 w-24 bg-gray-200 animate-pulse rounded"></div>
-        <div className="h-12 bg-gray-200 animate-pulse rounded"></div>
-      </div>
-    )
+  if (loading) {
+    return <TeamAvailabilitySkeleton />
   }
 
-  const presentMembers = totalMembers - onLeaveMembers.length
+  const presentMembers = totalMembers - membersOnLeave.length
+  const attendanceRate = (presentMembers / totalMembers) * 100
 
   return (
     <div className="space-y-4">
-      <div className="text-3xl font-bold">{presentMembers}/{totalMembers}</div>
-      <div className="text-sm text-muted-foreground">
-        <p>團隊成員出勤人數: {presentMembers}</p>
-        <p>團隊成員休假人數: {onLeaveMembers.length}</p>
-      </div>
-      {onLeaveMembers.length > 0 && (
-        <div className="text-sm">
-          <p className="font-medium">今日休假人員:</p>
-          <ul className="list-disc list-inside text-muted-foreground">
-            {onLeaveMembers.map((member) => (
-              <li key={member.id}>
-                {member.user.first_name} {member.user.last_name} ({member.leave_type.name})
-              </li>
-            ))}
-          </ul>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <div className="text-2xl font-bold">{presentMembers}</div>
+          <div className="text-sm text-muted-foreground">
+            <div>今日出勤</div>
+            <div>共 {totalMembers} 人</div>
+          </div>
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          <div className="text-2xl font-bold">{attendanceRate.toFixed(1)}%</div>
+          <div className="text-sm text-muted-foreground">
+            <div>出勤率</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div className="text-sm font-medium mb-2">今日請假 ({membersOnLeave.length} 人)</div>
+        {membersOnLeave.length === 0 ? (
+          <div className="text-sm text-muted-foreground">今日無團隊成員請假</div>
+        ) : (
+          <div className="space-y-2">
+            {membersOnLeave.map((member) => (
+              <div key={member.id} className="text-sm">
+                {member.first_name} {member.last_name} - {member.leave_type}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 } 

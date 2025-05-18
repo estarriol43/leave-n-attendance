@@ -67,18 +67,18 @@ export function TeamCalendar() {
           <div className="space-y-4">
             <h3 className="font-medium">
               {date
-                ? date.toLocaleDateString("en-US", {
+                ? date.toLocaleDateString("zh-TW", {
                     weekday: "long",
                     year: "numeric",
                     month: "long",
                     day: "numeric",
                   })
-                : "Select a date"}
+                : "請選擇日期"}
             </h3>
 
             {selectedDateMembers.length > 0 ? (
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Team members on leave:</p>
+                <p className="text-sm text-muted-foreground">請假的團隊成員：</p>
                 <div className="flex flex-wrap gap-2">
                   {selectedDateMembers.map((member, index) => (
                     <Avatar key={index}>
@@ -89,7 +89,7 @@ export function TeamCalendar() {
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No team members on leave for this date.</p>
+              <p className="text-sm text-muted-foreground">這個日期沒有團隊成員請假。</p>
             )}
           </div>
         </CardContent>

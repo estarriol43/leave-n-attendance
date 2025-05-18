@@ -3,10 +3,10 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
 
 const data = [
-  { name: "Annual Leave", value: 45, color: "#8884d8" },
-  { name: "Sick Leave", value: 25, color: "#82ca9d" },
-  { name: "Personal Leave", value: 20, color: "#ffc658" },
-  { name: "Public Holiday", value: 10, color: "#ff8042" },
+  { name: "年假", value: 45, color: "#8884d8" },
+  { name: "病假", value: 25, color: "#82ca9d" },
+  { name: "事假", value: 20, color: "#ffc658" },
+  { name: "國定假日", value: 10, color: "#ff8042" },
 ]
 
 export function LeaveTypeDistributionChart() {
@@ -28,7 +28,7 @@ export function LeaveTypeDistributionChart() {
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Pie>
-          <Tooltip formatter={(value) => [`${value}%`, "Percentage"]} />
+          <Tooltip formatter={(value) => [`${value}%`, "百分比"]} />
           <Legend />
         </PieChart>
       </ResponsiveContainer>

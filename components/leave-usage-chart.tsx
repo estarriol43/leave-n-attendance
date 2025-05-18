@@ -4,22 +4,22 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 
 const data = [
   {
-    name: "Annual",
+    name: "年假",
     available: 7,
     used: 3,
   },
   {
-    name: "Sick",
+    name: "病假",
     available: 30,
     used: 5,
   },
   {
-    name: "Personal",
+    name: "事假",
     available: 14,
     used: 6,
   },
   {
-    name: "Public",
+    name: "國假",
     available: 5,
     used: 1,
   },
@@ -43,8 +43,8 @@ export function LeaveUsageChart() {
           <YAxis />
           <Tooltip />
           <Legend />
-          <Bar dataKey="available" fill="#8884d8" name="Available" />
-          <Bar dataKey="used" fill="#82ca9d" name="Used" />
+          <Bar dataKey="available" fill="#8884d8" name="可用天數" />
+          <Bar dataKey="used" fill="#82ca9d" name="已使用" />
         </BarChart>
       </ResponsiveContainer>
     </div>
