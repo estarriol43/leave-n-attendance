@@ -62,7 +62,6 @@ export default function NewLeaveRequestPage() {
 
   // 檢查表單是否已完整填寫
   const isFormValid = form.formState.isValid
-  const formErrors = form.formState.errors
 
   // 獲取未填寫的必填欄位
   const getMissingFields = () => {
@@ -166,11 +165,6 @@ export default function NewLeaveRequestPage() {
                     <Select 
                       onValueChange={field.onChange} 
                       value={field.value}
-                      onOpenChange={(open) => {
-                        if (!open && !field.value) {
-                          form.trigger("leaveType")
-                        }
-                      }}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -268,11 +262,6 @@ export default function NewLeaveRequestPage() {
                     <Select 
                       onValueChange={field.onChange} 
                       value={field.value}
-                      onOpenChange={(open) => {
-                        if (!open && !field.value) {
-                          form.trigger("proxyPerson")
-                        }
-                      }}
                     >
                       <FormControl>
                         <SelectTrigger>
