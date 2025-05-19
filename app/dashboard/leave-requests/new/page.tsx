@@ -163,7 +163,12 @@ export default function NewLeaveRequestPage() {
                   <FormItem>
                     <FormLabel>假別</FormLabel>
                     <Select 
-                      onValueChange={field.onChange} 
+                      onValueChange={(value) => {
+                        field.onChange(value)
+                        if (!value) {
+                          form.trigger("leaveType")
+                        }
+                      }}
                       value={field.value}
                     >
                       <FormControl>
@@ -260,7 +265,12 @@ export default function NewLeaveRequestPage() {
                   <FormItem>
                     <FormLabel>代理人</FormLabel>
                     <Select 
-                      onValueChange={field.onChange} 
+                      onValueChange={(value) => {
+                        field.onChange(value)
+                        if (!value) {
+                          form.trigger("proxyPerson")
+                        }
+                      }}
                       value={field.value}
                     >
                       <FormControl>
