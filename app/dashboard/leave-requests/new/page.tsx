@@ -87,7 +87,7 @@ export default function NewLeaveRequestPage() {
       } catch (error) {
         console.error('Failed to fetch data:', error)
         toast.error("載入資料失敗", {
-          description: "請重新整理頁面再試一次",
+          description: error instanceof Error ? error.message : "發生未知錯誤",
         })
       }
     }
@@ -101,7 +101,7 @@ export default function NewLeaveRequestPage() {
         leave_type_id: parseInt(values.leaveType),
         start_date: format(values.dateRange.from, 'yyyy-MM-dd'),
         end_date: format(values.dateRange.to, 'yyyy-MM-dd'),
-        reason: values.reason,
+        reason: values.reason || "",
         proxy_user_id: parseInt(values.proxyPerson),
       }
 

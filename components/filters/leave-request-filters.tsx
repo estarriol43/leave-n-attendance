@@ -117,13 +117,7 @@ export function LeaveRequestFilters({
     try {
       setIsLoading(true);
       const data = await getTeamMembers();
-      // 確保 team_members 存在並且是一個陣列
-      if (data && data.team_members && Array.isArray(data.team_members)) {
-        setTeamMembers(data.team_members);
-      } else {
-        console.error('Unexpected team members data format:', data);
-        setTeamMembers([]);
-      }
+      setTeamMembers(data);
     } catch (error) {
       console.error('Error fetching team members:', error);
       setTeamMembers([]);

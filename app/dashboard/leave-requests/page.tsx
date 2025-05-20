@@ -24,8 +24,8 @@ export default function LeaveRequestsPage() {
       <Tabs defaultValue="my-requests">
         <TabsList>
           <TabsTrigger value="my-requests">我的申請</TabsTrigger>
-          <TabsTrigger value="pending-approval">待核准</TabsTrigger>
-          <TabsTrigger value="team-requests">團隊申請</TabsTrigger>
+          <TabsTrigger value="pending-approval">待我審核</TabsTrigger>
+          <TabsTrigger value="team-requests">審核紀錄</TabsTrigger>
         </TabsList>
         <TabsContent value="my-requests" className="mt-4">
           <Card>
@@ -41,7 +41,7 @@ export default function LeaveRequestsPage() {
         <TabsContent value="pending-approval" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>待核准申請</CardTitle>
+              <CardTitle>待我審核的申請</CardTitle>
               <CardDescription>等待您核准的請假申請</CardDescription>
             </CardHeader>
             <CardContent>
@@ -52,8 +52,8 @@ export default function LeaveRequestsPage() {
         <TabsContent value="team-requests" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>團隊申請</CardTitle>
-              <CardDescription>查看團隊所有的請假申請</CardDescription>
+              <CardTitle>審核紀錄</CardTitle>
+              <CardDescription>查看下屬的請假申請審核紀錄</CardDescription>
             </CardHeader>
             <CardContent>
               <LeaveRequestsTable type="team-requests" />
