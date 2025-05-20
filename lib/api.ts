@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // 可根據實際 API base url 調整
 // 注意：API 伺服器需要運行在這個位址，或者配置好正確的代理
-const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://leave-n-attendance-system.site/'
 
 // 開發時輸出完整錯誤日誌以便調試
 const DEBUG = process.env.NODE_ENV !== 'production'
