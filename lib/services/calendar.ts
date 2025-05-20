@@ -1,4 +1,5 @@
 import api from "@/lib/api"
+import { getTeamMembers } from "./team"
 
 export interface MemberOnLeave {
   id: number
@@ -47,9 +48,9 @@ export async function getTeamMembersOnLeaveToday(): Promise<{
     const todayInfo = calendarData.days.find(day => day.date === todayString)
     const membersOnLeave = todayInfo?.members_on_leave || []
     
-    // TODO: Get total team members from team API
-    // For now using a placeholder value
-    const totalMembers = 10
+    // Get total team members from team API
+    const teamMembers = await getTeamMembers()
+    const totalMembers = teamMembers.length
     
     return {
       membersOnLeave,

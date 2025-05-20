@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { LeaveBalanceProgressLegacy } from "@/components/leave-balance-progress"
 import { RecentLeaveRequests } from "@/components/recent-leave-requests"
 import { TeamAvailability } from "@/components/team-availability"
+import { UpcomingHolidays } from "@/components/upcoming-holidays"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function DashboardPage() {
@@ -39,15 +40,27 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>近期請假申請</CardTitle>
-          <CardDescription>您最近的請假申請及其狀態</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RecentLeaveRequests />
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>近期請假申請</CardTitle>
+            <CardDescription>您最近的請假申請及其狀態</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RecentLeaveRequests />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>近期假日</CardTitle>
+            <CardDescription>即將到來的公休假日</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <UpcomingHolidays />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 } 

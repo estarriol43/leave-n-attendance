@@ -85,7 +85,7 @@ export function RecentLeaveRequests() {
               </Avatar>
               <div>
                 <div className="font-medium">
-                  {request.proxy_person.first_name} {request.proxy_person.last_name}
+                  [代理人] {request.proxy_person.last_name}{request.proxy_person.first_name} 
                 </div>
                 <div className="text-sm text-muted-foreground">
                   {request.leave_type.name} • {request.start_date} 至 {request.end_date}

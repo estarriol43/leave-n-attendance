@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { 
-  getTeamMembersOnLeaveToday, 
-  type MemberOnLeave 
-} from "@/lib/services/calendar"
+  getTeamMembersOnLeaveToday
+} from "@/lib/services/team"
+import { LeaveRequestTeamItem } from "@/lib/services/team"
 
 // Skeleton component defined inline
 function TeamAvailabilitySkeleton() {
@@ -57,7 +57,7 @@ function TeamAvailabilityStatsSkeleton() {
 }
 
 export function TeamAvailability() {
-  const [membersOnLeave, setMembersOnLeave] = useState<MemberOnLeave[]>([])
+  const [onLeaveMembers, setOnLeaveMembers] = useState<LeaveRequestTeamItem[]>([])
   const [totalMembers, setTotalMembers] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -67,7 +67,7 @@ export function TeamAvailability() {
       try {
         setLoading(true)
         const data = await getTeamMembersOnLeaveToday()
-        setMembersOnLeave(data.membersOnLeave)
+        setOnLeaveMembers(data.onLeaveMembers)
         setTotalMembers(data.totalMembers)
       } catch (err) {
         setError("無法載入團隊資料")
@@ -92,8 +92,8 @@ export function TeamAvailability() {
     return <TeamAvailabilitySkeleton />
   }
 
-  const presentMembers = totalMembers - membersOnLeave.length
-  const attendanceRate = (presentMembers / totalMembers) * 100
+  const presentMembers = totalMembers - onLeaveMembers.length
+  const attendanceRate = totalMembers > 0 ? (presentMembers / totalMembers) * 100 : 0
 
   return (
     <div className="space-y-4">
@@ -113,14 +113,14 @@ export function TeamAvailability() {
         </div>
       </div>
       <div>
-        <div className="text-sm font-medium mb-2">今日請假 ({membersOnLeave.length} 人)</div>
-        {membersOnLeave.length === 0 ? (
+        <div className="text-sm font-medium mb-2">今日請假 ({onLeaveMembers.length} 人)</div>
+        {onLeaveMembers.length === 0 ? (
           <div className="text-sm text-muted-foreground">今日無團隊成員請假</div>
         ) : (
           <div className="space-y-2">
-            {membersOnLeave.map((member) => (
-              <div key={member.id} className="text-sm">
-                {member.first_name} {member.last_name} - {member.leave_type}
+            {onLeaveMembers.map((request) => (
+              <div key={request.id} className="text-sm">
+                {request.user.first_name} {request.user.last_name} - {request.leave_type.name}
               </div>
             ))}
           </div>
