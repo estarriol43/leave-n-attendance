@@ -40,7 +40,7 @@ export function Navbar() {
                     alt="User"
                     data-testid="user-avatar"
                   />
-                  <AvatarFallback>JD</AvatarFallback>
+                  <AvatarFallback>{user?.first_name || ''}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
