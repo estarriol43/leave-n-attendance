@@ -37,8 +37,10 @@ jobs:
       run: |-
         docker push '${{ vars.REGISTRY_ZONE }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ vars.REGISTRY_NAME }}/${{ vars.IMAGE_NAME }}:${{ github.sha }}'
 
-    - name: 'Deploy on Cloud Run' 
+    - name: 'Deploy on Cloud Run'
       uses: 'google-github-actions/deploy-cloudrun@v2'
       with:
         service: '${{ vars.DEPLOYMENT_NAME }}'
         image: '${{ vars.REGISTRY_ZONE }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ vars.REGISTRY_NAME }}/${{ vars.IMAGE_NAME }}:${{ github.sha }}'
+        region: '${{ vars.CLOUDRUN_ZONE }}'
+        flags: '--network=${{ vars.VPC }} --subnet=${{ vars.VPC_SUBNET }} --port 3000'
