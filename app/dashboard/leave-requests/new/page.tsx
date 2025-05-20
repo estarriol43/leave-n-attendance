@@ -18,10 +18,12 @@ import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { getTeamMembers, type TeamMember } from "@/lib/services/team"
 import { type LeaveType, getLeaveTypes } from "@/lib/services/leave-type"
 import { createLeaveRequest } from "@/lib/services/leave-request"
+import { getMyLeaveBalance, type LeaveBalanceItem } from "@/lib/services/leave-balance"
 
 const formSchema = z.object({
   leaveType: z.string({
@@ -35,9 +37,7 @@ const formSchema = z.object({
       required_error: "請選擇結束日期",
     }),
   }),
-  reason: z.string().min(5, {
-    message: "請至少填寫 5 個字",
-  }),
+  reason: z.string().optional(),
   proxyPerson: z.string({
     required_error: "請選擇代理人",
   }),
@@ -48,6 +48,7 @@ export default function NewLeaveRequestPage() {
   const router = useRouter()
   const [files, setFiles] = useState<File[]>([])
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
+  const [leaveBalances, setLeaveBalances] = useState<LeaveBalanceItem[]>([])
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -56,17 +57,33 @@ export default function NewLeaveRequestPage() {
     defaultValues: {
       reason: "",
     },
+    mode: "onChange",
   })
+
+  // 檢查表單是否已完整填寫
+  const isFormValid = form.formState.isValid
+
+  // 獲取未填寫的必填欄位
+  const getMissingFields = () => {
+    const missingFields = []
+    if (!form.getValues("leaveType")) missingFields.push("假別")
+    if (!form.getValues("dateRange.from")) missingFields.push("開始日期")
+    if (!form.getValues("dateRange.to")) missingFields.push("結束日期")
+    if (!form.getValues("proxyPerson")) missingFields.push("代理人")
+    return missingFields
+  }
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [types, members] = await Promise.all([
+        const [types, members, balance] = await Promise.all([
           getLeaveTypes(),
           getTeamMembers(),
+          getMyLeaveBalance(),
         ])
         setLeaveTypes(types)
         setTeamMembers(members)
+        setLeaveBalances(balance.balances)
       } catch (error) {
         console.error('Failed to fetch data:', error)
         toast.error("載入資料失敗", {
@@ -116,6 +133,14 @@ export default function NewLeaveRequestPage() {
     setFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
+  // 處理送出按鈕點擊
+  const handleSubmitClick = () => {
+    if (!isFormValid) {
+      // 觸發所有欄位的驗證
+      form.trigger()
+    }
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
       <div className="flex flex-col gap-2 mb-6">
@@ -137,18 +162,34 @@ export default function NewLeaveRequestPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>假別</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value)
+                        if (!value) {
+                          form.trigger("leaveType")
+                        }
+                      }}
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="選擇假別" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {leaveTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id.toString()}>
-                            {type.name}
-                          </SelectItem>
-                        ))}
+                        {leaveTypes
+                          .filter(type => {
+                            const balance = leaveBalances.find(b => b.leave_type.id === type.id)
+                            return balance && balance.remaining_days > 0
+                          })
+                          .map((type) => {
+                            const balance = leaveBalances.find(b => b.leave_type.id === type.id)
+                            return (
+                              <SelectItem key={type.id} value={type.id.toString()}>
+                                {type.name} (剩餘 {balance?.remaining_days} 天)
+                              </SelectItem>
+                            )
+                          })}
                       </SelectContent>
                     </Select>
                     <FormDescription>請選擇您要申請的假別類型。</FormDescription>
@@ -192,7 +233,7 @@ export default function NewLeaveRequestPage() {
                         <Calendar mode="range" selected={field.value} onSelect={field.onChange} initialFocus />
                       </PopoverContent>
                     </Popover>
-                    <FormDescription>請選擇請假的起始日期。</FormDescription>
+                    <FormDescription>請選擇請假的起始與結束日期。</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -223,7 +264,15 @@ export default function NewLeaveRequestPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>代理人</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value)
+                        if (!value) {
+                          form.trigger("proxyPerson")
+                        }
+                      }}
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="選擇代理人" />
@@ -299,7 +348,12 @@ export default function NewLeaveRequestPage() {
                 >
                   取消
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting || !isFormValid}
+                  className={!isFormValid ? "opacity-50" : ""}
+                  onClick={handleSubmitClick}
+                >
                   {isSubmitting ? "送出中..." : "送出申請"}
                 </Button>
               </div>
